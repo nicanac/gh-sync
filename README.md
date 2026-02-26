@@ -1,20 +1,42 @@
-# gh-sync - .github Folder Sync Tool
+# gh-sync — AI Config Folders Sync Tool
 
-Synchronize a shared `.github` folder (agents, skills, memory-bank, instructions) across all your projects.
+Synchronize shared AI configuration folders across all your projects.
 
-One **golden source** folder is the single source of truth. Push it to any project, or pull changes back.
+One **golden source** directory is the single source of truth. It contains up to four folders:
+
+| Folder | Purpose |
+|--------|---------|
+| `.github/` | GitHub Copilot agents, skills, memory-bank, instructions |
+| `.agent/` | VS Code agent rules, skills, workflows |
+| `.agents/` | Additional agent skills |
+| `.claude/` | Claude Code skills |
+
+Push them all to any project in one command, or pull changes back.
+
+---
+
+## Requirements
+
+- **Bash 4+** (macOS: install via `brew install bash`)
+- Standard Unix utilities: `find`, `stat`, `md5sum` (or `md5` on macOS), `awk`, `sort`
+- Works on: Linux, macOS, WSL, Git Bash (Windows)
 
 ---
 
 ## Installation
 
-### Option A: Double-click (easiest)
-1. Double-click **`install.cmd`**
-2. Done! Open a **new terminal**.
+### Option A: One-liner
 
-### Option B: PowerShell
-```powershell
-powershell -ExecutionPolicy Bypass -File install.ps1
+```bash
+bash install.sh
+```
+
+### Option B: Manual
+
+```bash
+cp gh-sync.sh ~/.local/bin/gh-sync
+chmod +x ~/.local/bin/gh-sync
+# Ensure ~/.local/bin is on your PATH
 ```
 
 ---
@@ -27,12 +49,14 @@ After installing, run this once in any terminal:
 gh-sync init
 ```
 
-It will ask you for the path to your golden `.github` folder.  
-Example: `C:\Users\YourName\Documents\code\ai-startup\.github`
+It will ask you for the path to your golden source **directory** (the parent folder that contains `.github/`, `.agent/`, etc.).
+Example: `~/code/ai-startup`
 
-This saves the path in `~\.gh-sync-config` so it persists.
+This saves the path in `~/.gh-sync-config` so it persists.
 
 > **Alternative:** Set the environment variable `GH_SYNC_SOURCE` instead.
+
+The `init` command shows which of the four folders exist in your golden source and how many files each has.
 
 ---
 
@@ -42,50 +66,62 @@ Open any terminal, `cd` into a project folder, then:
 
 | Command | Description |
 |---------|-------------|
-| `gh-sync push` | Copy golden `.github` -> current project |
-| `gh-sync pull` | Copy current project `.github` -> golden source |
-| `gh-sync diff` | Show file-by-file differences |
-| `gh-sync status` | Quick overview (how many in-sync, modified, etc.) |
+| `gh-sync push` | Copy all golden folders → current project |
+| `gh-sync pull` | Copy current project folders → golden source |
+| `gh-sync diff` | Show file-by-file differences per folder |
+| `gh-sync status` | Quick overview (in-sync, modified, missing — per folder + totals) |
 | `gh-sync init` | (Re)configure the golden source path |
 
 ### Options
 
 | Flag | Description |
 |------|-------------|
-| `-DryRun` | Preview what would change, without modifying files |
-| `-Force` | Skip the "Proceed? [y/N]" confirmation prompt |
-| `-Exclude pattern1,pattern2` | Exclude files matching wildcard patterns |
+| `--dry-run` | Preview what would change, without modifying files |
+| `--force` | Skip the "Proceed? [y/N]" confirmation prompt |
+| `--exclude pat1,pat2` | Exclude files matching patterns (comma-separated) |
+| `-h`, `--help` | Show help message |
+| `-v`, `--version` | Show version |
 
 ### Examples
 
 ```bash
-# Push golden source to the current project
+# Push all golden folders to the current project
 gh-sync push
 
 # Push to a specific project
-gh-sync push C:\Projects\MyApp
+gh-sync push ~/projects/my-app
 
-# See what's different before pushing
+# See what's different across all folders
 gh-sync diff
 
 # Preview a push without making changes
-gh-sync push -DryRun
+gh-sync push --dry-run
 
 # Push without confirmation
-gh-sync push -Force
+gh-sync push --force
 
 # Pull project changes back into golden source
 gh-sync pull
+
+# Exclude files matching patterns
+gh-sync push --exclude "*.log,node_modules/*"
+
+# Check sync status
+gh-sync status
 ```
 
 ---
 
 ## How it works
 
-- **MD5 hash comparison** -- only files that actually changed are copied
-- **Backup before sync** -- a timestamped backup is saved in `%TEMP%\gh-sync-backup-*`
-- **Non-destructive** -- files that exist only in the target are flagged but never deleted
-- **No hardcoded paths** -- each user configures their own golden source via `gh-sync init`
+- **Multi-folder sync** — syncs `.github`, `.agent`, `.agents`, `.claude` in one go
+- **Hash comparison** — only files that actually changed are copied (md5sum / md5 / shasum)
+- **Backup before sync** — a timestamped backup per folder is saved in `$TMPDIR/gh-sync-backup-*`
+- **Non-destructive** — files that exist only in the target are flagged but never deleted
+- **No hardcoded paths** — each user configures their own golden source via `gh-sync init`
+- **Per-folder reporting** — diff, status and push/pull show results per folder plus a grand total
+- **Cross-platform** — works on Linux, macOS, WSL, and Git Bash on Windows
+- **Defensive coding** — strict mode (`set -Eeuo pipefail`), error traps, proper quoting
 
 ---
 
@@ -101,9 +137,9 @@ gh-sync pull
 
 ## Uninstall
 
-Delete these files:
-- `%USERPROFILE%\bin\gh-sync.ps1`
-- `%USERPROFILE%\bin\gh-sync.cmd`
-- `%USERPROFILE%\.gh-sync-config`
+```bash
+rm -f ~/.local/bin/gh-sync    # or ~/bin/gh-sync
+rm -f ~/.gh-sync-config
+```
 
-Optionally remove `%USERPROFILE%\bin` from your PATH (System > Environment Variables).
+Optionally remove the PATH line added to your shell RC file (`~/.bashrc`, `~/.zshrc`, etc.).
