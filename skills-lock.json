@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "skills": {
+    "bash-defensive-patterns": {
+      "source": "wshobson/agents",
+      "sourceType": "github",
+      "computedHash": "27306f35e146e1f7c56c7ab30e136d3e9fa2dd86b3816b0efd436c1129105377"
+    }
+  }
+}

@@ -1,0 +1,26 @@
+// Import design system variables
+@import 'variables';
+
+.component-name {
+  // Component styles using design system variables
+  padding: $spacing-md;
+  background-color: $background-color;
+  
+  &__button {
+    padding: $button-padding;
+    background-color: $primary-color;
+    color: $text-on-primary;
+    border: none;
+    border-radius: $border-radius;
+    cursor: pointer;
+    
+    &:hover {
+      background-color: $primary-color-dark;
+    }
+    
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  }
+}

@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <title>UX Post-Migration Checklist &lpar;Angular v20&rpar;</title>
+            <style>
+/* From extension vscode.github */
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+.vscode-dark img[src$=\#gh-light-mode-only],
+.vscode-light img[src$=\#gh-dark-mode-only],
+.vscode-high-contrast:not(.vscode-high-contrast-light) img[src$=\#gh-light-mode-only],
+.vscode-high-contrast-light img[src$=\#gh-dark-mode-only] {
+	display: none;
+}
+
+</style>
+            
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Microsoft/vscode/extensions/markdown-language-features/media/markdown.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Microsoft/vscode/extensions/markdown-language-features/media/highlight.css">
+<style>
+            body {
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe WPC', 'Segoe UI', system-ui, 'Ubuntu', 'Droid Sans', sans-serif;
+                font-size: 18px;
+                line-height: 1.6;
+            }
+        </style>
+        <style>
+.task-list-item {
+    list-style-type: none;
+}
+
+.task-list-item-checkbox {
+    margin-left: -20px;
+    vertical-align: middle;
+    pointer-events: none;
+}
+</style>
+<style>
+:root {
+  --color-note: #0969da;
+  --color-tip: #1a7f37;
+  --color-warning: #9a6700;
+  --color-severe: #bc4c00;
+  --color-caution: #d1242f;
+  --color-important: #8250df;
+}
+
+</style>
+<style>
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-note: #2f81f7;
+    --color-tip: #3fb950;
+    --color-warning: #d29922;
+    --color-severe: #db6d28;
+    --color-caution: #f85149;
+    --color-important: #a371f7;
+  }
+}
+
+</style>
+<style>
+.markdown-alert {
+  padding: 0.5rem 1rem;
+  margin-bottom: 16px;
+  color: inherit;
+  border-left: .25em solid #888;
+}
+
+.markdown-alert>:first-child {
+  margin-top: 0
+}
+
+.markdown-alert>:last-child {
+  margin-bottom: 0
+}
+
+.markdown-alert .markdown-alert-title {
+  display: flex;
+  font-weight: 500;
+  align-items: center;
+  line-height: 1
+}
+
+.markdown-alert .markdown-alert-title .octicon {
+  margin-right: 0.5rem;
+  display: inline-block;
+  overflow: visible !important;
+  vertical-align: text-bottom;
+  fill: currentColor;
+}
+
+.markdown-alert.markdown-alert-note {
+  border-left-color: var(--color-note);
+}
+
+.markdown-alert.markdown-alert-note .markdown-alert-title {
+  color: var(--color-note);
+}
+
+.markdown-alert.markdown-alert-important {
+  border-left-color: var(--color-important);
+}
+
+.markdown-alert.markdown-alert-important .markdown-alert-title {
+  color: var(--color-important);
+}
+
+.markdown-alert.markdown-alert-warning {
+  border-left-color: var(--color-warning);
+}
+
+.markdown-alert.markdown-alert-warning .markdown-alert-title {
+  color: var(--color-warning);
+}
+
+.markdown-alert.markdown-alert-tip {
+  border-left-color: var(--color-tip);
+}
+
+.markdown-alert.markdown-alert-tip .markdown-alert-title {
+  color: var(--color-tip);
+}
+
+.markdown-alert.markdown-alert-caution {
+  border-left-color: var(--color-caution);
+}
+
+.markdown-alert.markdown-alert-caution .markdown-alert-title {
+  color: var(--color-caution);
+}
+
+</style>
+        
+        </head>
+        <body class="vscode-body vscode-light">
+            <h1 id="ux-post-migration-checklist-angular-v20">UX Post-Migration Checklist (Angular v20)</h1>
+<h2 id="purpose">Purpose</h2>
+<p>Use this checklist to validate that the Angular v20 migration did not change user experience, accessibility, or visual behavior in <code>infrabel-components-angular-v20</code>.</p>
+<h2 id="scope">Scope</h2>
+<ul>
+<li>In scope: <code>3-infrabel-components-angular/infrabel-components-angular-v20</code></li>
+<li>Out of scope: v17 and v18 folders (do not compare by editing them; use as visual reference only)</li>
+<li>Constraint: PrimeNG version stays unchanged (<code>17.18.5</code>)</li>
+</ul>
+<hr>
+<h2 id="how-to-run-checks-quick">How to run checks (quick)</h2>
+<ul>
+<li>Start app and navigate through key pages/components in the demo app.</li>
+<li>Validate in at least:
+<ul>
+<li>Desktop (Chrome/Edge)</li>
+<li>Mobile viewport (responsive mode)</li>
+<li>Keyboard-only navigation</li>
+</ul>
+</li>
+<li>Focus on high-impact components first, then spot-check the rest.</li>
+</ul>
+<hr>
+<h2 id="1-global-ux--visual-consistency">1) Global UX &amp; Visual Consistency</h2>
+<ul class="contains-task-list">
+<li class="task-list-item enabled"><input class="task-list-item-checkbox"type="checkbox"> Typography, spacing, and sizing look identical to pre-migration reference</li>
+<li class="task-list-item enabled"><input class="task-list-item-checkbox"type="checkbox"> Theme colors and contrast look unchanged</li>
+<li class="task-list-item enabled"><input class="task-list-item-checkbox"type="checkbox"> No layout shifts on initial load</li>
+<li class="task-list-item enabled"><input class="task-list-item-checkbox"type="checkbox"> No broken icons, missing images, or placeholder artifacts</li>
+<li class="task-list-item enabled"><input class="task-list-item-checkbox"type="checkbox"> Animations/transitions still feel natural (no jank/flicker)</li>
+<li class="task-list-item enabled"><input class="task-list-item-checkbox"type="checkbox"> Toasts, overlays, and dialogs appear in correct stacking order</li>
+<li class="task-list-item enabled"><input class="task-list-item-checkbox"type="checkbox"> No unexpected console UI warnings during normal interactions</li>
+</ul>
+<p><strong>Pass criteria:</strong> No visible regressions in global styling, layout, or motion.</p>
+<hr>
+<h2 id="2-navigation--information-architecture">2) Navigation &amp; Information Architecture</h2>
+<ul class="contains-task-list">
+<li class="task-list-item enabled"><input class="task-list-item-checkbox"type="checkbox"> Main nav renders all expected items</li>
+<li class="task-list-item enabled"><input class="task-list-item-checkbox"type="checkbox"> Active/selected states are visually correct</li>
+<li class="task-list-item enabled"><input class="task-list-item-checkbox"type="checkbox"> Hover/focus/pressed states are consistent</li>
+<li class="task-list-item enabled"><input class="task-list-item-checkbox"type="checkbox"> Breadcrumb, side menu, and mega menu flows still match expected behavior</li>
+<li class="task-list-item enabled"><input class="task-list-item-checkbox"type="checkbox"> Route transitions preserve scroll/focus expectations</li>
+<li class="task-list-item enabled"><input class="task-list-item-checkbox"type="checkbox"> Mobile nav (burger/menu) opens/closes correctly</li>
+</ul>
+<p><strong>Pass criteria:</strong> Users can reach all key destinations with unchanged behavior.</p>
+<hr>
+<h2 id="3-forms--inputs-highest-risk-area">3) Forms &amp; Inputs (highest risk area)</h2>
+<p>Validate these interactions on representative forms and input-heavy pages:</p>
+<ul class="contains-task-list">
+<li class="task-list-item enabled"><input class="task-list-item-checkbox"type="checkbox"> Labels, placeholders, helper text, and errors display correctly</li>
+<li class="task-list-item enabled"><input class="task-list-item-checkbox"type="checkbox"> Required/optional indicators are correct</li>
+<li class="task-list-item enabled"><input class="task-list-item-checkbox"type="checkbox"> Input states: default, focus, error, disabled, readonly</li>
+<li class="task-list-item enabled"><input class="task-list-item-checkbox"type="checkbox"> Keyboard typing, tab order, and enter/escape behaviors</li>
+<li class="task-list-item enabled"><input class="task-list-item-checkbox"type="checkbox"> Date/calendar input:
+<ul class="contains-task-list">
+<li class="task-list-item enabled"><input class="task-list-item-checkbox"type="checkbox"> Open/close behavior</li>
+<li class="task-list-item enabled"><input class="task-list-item-checkbox"type="checkbox"> Date/time selection</li>
+<li class="task-list-item enabled"><input class="task-list-item-checkbox"type="checkbox"> Clear/reset behavior</li>
+<li class="task-list-item enabled"><input class="task-list-item-checkbox"type="checkbox"> Validation message behavior</li>
+</ul>
+</li>
+<li class="task-list-item enabled"><input class="task-list-item-checkbox"type="checkbox"> Upload / drag-drop:
+<ul class="contains-task-list">
+<li class="task-list-item enabled"><input class="task-list-item-checkbox"type="checkbox"> Drag-over visual state</li>
+<li class="task-list-item enabled"><input class="task-list-item-checkbox"type="checkbox"> Drop behavior</li>
+<li class="task-list-item enabled"><input class="task-list-item-checkbox"type="checkbox"> Error/success messages</li>
+<li class="task-list-item enabled"><input class="task-list-item-checkbox"type="checkbox"> Disabled mode</li>
+</ul>
+</li>
+<li class="task-list-item enabled"><input class="task-list-item-checkbox"type="checkbox"> Autocomplete/search:
+<ul class="contains-task-list">
+<li class="task-list-item enabled"><input class="task-list-item-checkbox"type="checkbox"> Results rendering</li>
+<li class="task-list-item enabled"><input class="task-list-item-checkbox"type="checkbox"> Empty state</li>
+<li class="task-list-item enabled"><input class="task-list-item-checkbox"type="checkbox"> Keyboard selection</li>
+</ul>
+</li>
+</ul>
+<p><strong>Pass criteria:</strong> No loss in form usability, validation clarity, or keyboard flow.</p>
+<hr>
+<h2 id="4-overlays-menus-and-popups">4) Overlays, Menus, and Popups</h2>
+<ul class="contains-task-list">
+<li class="task-list-item enabled"><input class="task-list-item-checkbox"type="checkbox"> Overlay opens at correct anchor/position</li>
+<li class="task-list-item enabled"><input class="task-list-item-checkbox"type="checkbox"> Overlay closes correctly (outside click, escape, close action)</li>
+<li class="task-list-item enabled"><input class="task-list-item-checkbox"type="checkbox"> Action menu, user menu, and contextual menus render correct options</li>
+<li class="task-list-item enabled"><input class="task-list-item-checkbox"type="checkbox"> Mobile sort dropdown behavior is correct (including “none”/reset option)</li>
+<li class="task-list-item enabled"><input class="task-list-item-checkbox"type="checkbox"> Push notifications UI:
+<ul class="contains-task-list">
+<li class="task-list-item enabled"><input class="task-list-item-checkbox"type="checkbox"> Correct rendering of link vs overlay mode</li>
+<li class="task-list-item enabled"><input class="task-list-item-checkbox"type="checkbox"> Close/dismiss interactions</li>
+</ul>
+</li>
+<li class="task-list-item enabled"><input class="task-list-item-checkbox"type="checkbox"> No clipped overlays due to container/scroll issues</li>
+</ul>
+<p><strong>Pass criteria:</strong> Popup/overlay interactions are predictable and visually correct.</p>
+<hr>
+<h2 id="5-data-display-components">5) Data Display Components</h2>
+<ul class="contains-task-list">
+<li class="task-list-item enabled"><input class="task-list-item-checkbox"type="checkbox"> Table headers, separators, filters, sorting states are correct</li>
+<li class="task-list-item enabled"><input class="task-list-item-checkbox"type="checkbox"> Paginators (top + standard):
+<ul class="contains-task-list">
+<li class="task-list-item enabled"><input class="task-list-item-checkbox"type="checkbox"> Page change controls</li>
+<li class="task-list-item enabled"><input class="task-list-item-checkbox"type="checkbox"> Disabled states</li>
+<li class="task-list-item enabled"><input class="task-list-item-checkbox"type="checkbox"> Invalid page input handling</li>
+</ul>
+</li>
+<li class="task-list-item enabled"><input class="task-list-item-checkbox"type="checkbox"> Badge/tag/message/severity visuals are consistent</li>
+<li class="task-list-item enabled"><input class="task-list-item-checkbox"type="checkbox"> Loader/spinner/progress states are correct</li>
+<li class="task-list-item enabled"><input class="task-list-item-checkbox"type="checkbox"> Empty/loading/error states still provide clear guidance</li>
+</ul>
+<p><strong>Pass criteria:</strong> Data exploration behaviors and states are unchanged.</p>
+<hr>
+<h2 id="6-responsiveness">6) Responsiveness</h2>
+<p>Check at minimum these breakpoints:</p>
+<ul class="contains-task-list">
+<li>
+<p>Mobile (~360–430px)</p>
+</li>
+<li>
+<p>Tablet (~768–1024px)</p>
+</li>
+<li>
+<p>Desktop (&gt;=1280px)</p>
+</li>
+<li class="task-list-item enabled">
+<p><input class="task-list-item-checkbox"type="checkbox"> No overlap/cutoff of controls or text</p>
+</li>
+<li class="task-list-item enabled">
+<p><input class="task-list-item-checkbox"type="checkbox"> Menus and drawers adapt correctly</p>
+</li>
+<li class="task-list-item enabled">
+<p><input class="task-list-item-checkbox"type="checkbox"> Tables and forms remain usable without horizontal breakage (unless expected)</p>
+</li>
+<li class="task-list-item enabled">
+<p><input class="task-list-item-checkbox"type="checkbox"> Touch targets remain comfortable on mobile</p>
+</li>
+</ul>
+<p><strong>Pass criteria:</strong> Core journeys are fully usable on all target breakpoints.</p>
+<hr>
+<h2 id="7-accessibility-wcag-aa-practical-checks">7) Accessibility (WCAG AA practical checks)</h2>
+<ul class="contains-task-list">
+<li class="task-list-item enabled"><input class="task-list-item-checkbox"type="checkbox"> Visible focus indicator on all interactive elements</li>
+<li class="task-list-item enabled"><input class="task-list-item-checkbox"type="checkbox"> Keyboard-only flow covers nav, forms, overlays, and submit actions</li>
+<li class="task-list-item enabled"><input class="task-list-item-checkbox"type="checkbox"> Logical tab order and focus trapping in overlays/dialogs</li>
+<li class="task-list-item enabled"><input class="task-list-item-checkbox"type="checkbox"> ARIA labels/roles for toggles, menus, popups, and custom controls</li>
+<li class="task-list-item enabled"><input class="task-list-item-checkbox"type="checkbox"> Error messages are perceivable and associated to inputs</li>
+<li class="task-list-item enabled"><input class="task-list-item-checkbox"type="checkbox"> Color contrast appears sufficient in default and error states</li>
+<li class="task-list-item enabled"><input class="task-list-item-checkbox"type="checkbox"> Screen reader spot-check on key flows (optional but recommended)</li>
+</ul>
+<p><strong>Pass criteria:</strong> No critical keyboard/focus/aria regressions.</p>
+<hr>
+<h2 id="8-content--internationalization">8) Content &amp; Internationalization</h2>
+<ul class="contains-task-list">
+<li class="task-list-item enabled"><input class="task-list-item-checkbox"type="checkbox"> No missing translation keys shown in UI</li>
+<li class="task-list-item enabled"><input class="task-list-item-checkbox"type="checkbox"> Plurals, dates, and formatting look correct</li>
+<li class="task-list-item enabled"><input class="task-list-item-checkbox"type="checkbox"> Truncated text still has proper tooltip/overflow behavior</li>
+<li class="task-list-item enabled"><input class="task-list-item-checkbox"type="checkbox"> Important labels/messages are still business-correct</li>
+</ul>
+<p><strong>Pass criteria:</strong> UI copy quality and localization behavior are intact.</p>
+<hr>
+<h2 id="9-performance-perception-quick-ux-checks">9) Performance Perception (quick UX checks)</h2>
+<ul class="contains-task-list">
+<li class="task-list-item enabled"><input class="task-list-item-checkbox"type="checkbox"> First meaningful screen appears without unusual delay</li>
+<li class="task-list-item enabled"><input class="task-list-item-checkbox"type="checkbox"> Menu open/close and typing interactions feel responsive</li>
+<li class="task-list-item enabled"><input class="task-list-item-checkbox"type="checkbox"> No repeated spinner flashes during simple interactions</li>
+<li class="task-list-item enabled"><input class="task-list-item-checkbox"type="checkbox"> No visible freezes when opening heavy components (calendar/table/upload)</li>
+</ul>
+<p><strong>Pass criteria:</strong> No noticeable perceived performance regression for end users.</p>
+<hr>
+<h2 id="10-high-priority-component-spot-check-list">10) High-Priority Component Spot-Check List</h2>
+<p>Prioritize these first (most impacted during migration):</p>
+<ul class="contains-task-list">
+<li class="task-list-item enabled"><input class="task-list-item-checkbox"type="checkbox"> Calendar</li>
+<li class="task-list-item enabled"><input class="task-list-item-checkbox"type="checkbox"> Upload + file-upload-drag-drop</li>
+<li class="task-list-item enabled"><input class="task-list-item-checkbox"type="checkbox"> Top paginator / paginator</li>
+<li class="task-list-item enabled"><input class="task-list-item-checkbox"type="checkbox"> Push notifications</li>
+<li class="task-list-item enabled"><input class="task-list-item-checkbox"type="checkbox"> Action menu / user menu / base overlay panel wrappers</li>
+<li class="task-list-item enabled"><input class="task-list-item-checkbox"type="checkbox"> Input expand / input wrapper</li>
+<li class="task-list-item enabled"><input class="task-list-item-checkbox"type="checkbox"> Search bar / mobile sort dropdown</li>
+<li class="task-list-item enabled"><input class="task-list-item-checkbox"type="checkbox"> Env directive visuals (chip/tag rendering)</li>
+</ul>
+<p><strong>Pass criteria:</strong> All high-priority components pass interaction + visual checks.</p>
+<hr>
+<h2 id="defect-logging-template-lightweight">Defect Logging Template (lightweight)</h2>
+<p>Use this format per issue:</p>
+<ul>
+<li><strong>ID:</strong> UX-MIG-###</li>
+<li><strong>Component/Page:</strong></li>
+<li><strong>Viewport:</strong> Desktop / Tablet / Mobile</li>
+<li><strong>Severity:</strong> Critical / Major / Minor</li>
+<li><strong>Observed behavior:</strong></li>
+<li><strong>Expected behavior:</strong></li>
+<li><strong>Repro steps:</strong></li>
+<li><strong>Screenshot/Video:</strong></li>
+<li><strong>Linked ticket:</strong></li>
+</ul>
+<hr>
+<h2 id="suggested-execution-plan-not-overload">Suggested Execution Plan (not overload)</h2>
+<ul>
+<li>Pass 1 (60–90 min): High-priority components only</li>
+<li>Pass 2 (45–60 min): Cross-cutting A11y + responsive checks</li>
+<li>Pass 3 (30 min): Retest reported fixes</li>
+</ul>
+<p>If time is limited, complete Pass 1 + A11y keyboard flow first.</p>
+
+            
+            
+        </body>
+        </html>

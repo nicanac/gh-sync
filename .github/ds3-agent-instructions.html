@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <title>DS3 Architect Central - Agent Instructions</title>
+            <style>
+/* From extension vscode.github */
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+.vscode-dark img[src$=\#gh-light-mode-only],
+.vscode-light img[src$=\#gh-dark-mode-only],
+.vscode-high-contrast:not(.vscode-high-contrast-light) img[src$=\#gh-light-mode-only],
+.vscode-high-contrast-light img[src$=\#gh-dark-mode-only] {
+	display: none;
+}
+
+</style>
+            
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Microsoft/vscode/extensions/markdown-language-features/media/markdown.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Microsoft/vscode/extensions/markdown-language-features/media/highlight.css">
+<style>
+            body {
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe WPC', 'Segoe UI', system-ui, 'Ubuntu', 'Droid Sans', sans-serif;
+                font-size: 18px;
+                line-height: 1.6;
+            }
+        </style>
+        <style>
+.task-list-item {
+    list-style-type: none;
+}
+
+.task-list-item-checkbox {
+    margin-left: -20px;
+    vertical-align: middle;
+    pointer-events: none;
+}
+</style>
+<style>
+:root {
+  --color-note: #0969da;
+  --color-tip: #1a7f37;
+  --color-warning: #9a6700;
+  --color-severe: #bc4c00;
+  --color-caution: #d1242f;
+  --color-important: #8250df;
+}
+
+</style>
+<style>
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-note: #2f81f7;
+    --color-tip: #3fb950;
+    --color-warning: #d29922;
+    --color-severe: #db6d28;
+    --color-caution: #f85149;
+    --color-important: #a371f7;
+  }
+}
+
+</style>
+<style>
+.markdown-alert {
+  padding: 0.5rem 1rem;
+  margin-bottom: 16px;
+  color: inherit;
+  border-left: .25em solid #888;
+}
+
+.markdown-alert>:first-child {
+  margin-top: 0
+}
+
+.markdown-alert>:last-child {
+  margin-bottom: 0
+}
+
+.markdown-alert .markdown-alert-title {
+  display: flex;
+  font-weight: 500;
+  align-items: center;
+  line-height: 1
+}
+
+.markdown-alert .markdown-alert-title .octicon {
+  margin-right: 0.5rem;
+  display: inline-block;
+  overflow: visible !important;
+  vertical-align: text-bottom;
+  fill: currentColor;
+}
+
+.markdown-alert.markdown-alert-note {
+  border-left-color: var(--color-note);
+}
+
+.markdown-alert.markdown-alert-note .markdown-alert-title {
+  color: var(--color-note);
+}
+
+.markdown-alert.markdown-alert-important {
+  border-left-color: var(--color-important);
+}
+
+.markdown-alert.markdown-alert-important .markdown-alert-title {
+  color: var(--color-important);
+}
+
+.markdown-alert.markdown-alert-warning {
+  border-left-color: var(--color-warning);
+}
+
+.markdown-alert.markdown-alert-warning .markdown-alert-title {
+  color: var(--color-warning);
+}
+
+.markdown-alert.markdown-alert-tip {
+  border-left-color: var(--color-tip);
+}
+
+.markdown-alert.markdown-alert-tip .markdown-alert-title {
+  color: var(--color-tip);
+}
+
+.markdown-alert.markdown-alert-caution {
+  border-left-color: var(--color-caution);
+}
+
+.markdown-alert.markdown-alert-caution .markdown-alert-title {
+  color: var(--color-caution);
+}
+
+</style>
+        
+        </head>
+        <body class="vscode-body vscode-light">
+            <h1 id="ds3-architect-central---agent-instructions">DS3 Architect Central - Agent Instructions</h1>
+<h2 id="1-role--persona">1. Role &amp; Persona</h2>
+<p>You are the <strong>Senior Design System Architect</strong>. You build with &quot;Component-First&quot; logic. You prioritize 2026 patterns: Angular 18+ (standalone components), PrimeNG 17+, and TypeScript 5.x with strict mode.</p>
+<h2 id="2-structural-grounding">2. Structural Grounding</h2>
+<ul>
+<li><strong>Source of Truth:</strong> Always refer to the existing component library in <code>3-infrabel-components-angular/infrabel-components-angular-v18/projects/infrabel-components-angular/src/lib/</code> before creating new components.</li>
+<li><strong>Project Structure:</strong> Follow the monorepo hierarchy strictly:
+<ol>
+<li><code>1-infrabel-designsystem/</code> - Core CSS/SCSS design tokens</li>
+<li><code>2-infrabel-theme-primeng/</code> - PrimeNG theme layer</li>
+<li><code>3-infrabel-components-angular/</code> - Angular component libraries (v17/v18/v20)</li>
+<li><code>4-infrabel-theme-bootstrap/</code> - Bootstrap theme integration</li>
+<li><code>5-angular-quickstart/</code> - Demo applications</li>
+</ol>
+</li>
+<li><strong>Changelog Updates:</strong> After completing any feature or fix, update the relevant <code>CHANGELOG.md</code> following conventional commits format.</li>
+</ul>
+<h2 id="3-tech-stack-preferences">3. Tech Stack Preferences</h2>
+<ul>
+<li><strong>Angular Version:</strong> Target Angular 18+ with standalone components. Use signals for reactivity where applicable.</li>
+<li><strong>Styling:</strong> Use SCSS from <code>1-infrabel-designsystem/src/</code>. Never use inline styles; use CSS custom properties defined in the design system.</li>
+<li><strong>UI Components:</strong> Extend PrimeNG components via <code>2-infrabel-theme-primeng/</code>. Favor composition and <code>ng-content</code> projection over complex @Input props.</li>
+<li><strong>Imports:</strong> Use the barrel export pattern:<pre><code class="language-typescript"><span class="hljs-keyword">import</span> { <span class="hljs-title class_">ComponentName</span>, <span class="hljs-title class_">ServiceName</span> } <span class="hljs-keyword">from</span> <span class="hljs-string">&#x27;@infrabel/infrabel-components-angular&#x27;</span>;
+</code></pre>
+</li>
+<li><strong>Aesthetic:</strong> Apply the &quot;Infrabel Enterprise&quot; design language:
+<ul>
+<li>Colors: Use CSS variables from design tokens (<code>--inf-primary</code>, <code>--inf-secondary</code>, etc.)</li>
+<li>Typography: Follow the Infrabel typography scale</li>
+<li>Spacing: Use the 8px grid system defined in tokens</li>
+</ul>
+</li>
+</ul>
+<h2 id="4-coding-guardrails">4. Coding Guardrails</h2>
+<ul>
+<li><strong>Standalone Only:</strong> All components MUST be standalone with explicit imports:<pre><code class="language-typescript"><span class="hljs-meta">@Component</span>({
+  <span class="hljs-attr">selector</span>: <span class="hljs-string">&#x27;inf-component-name&#x27;</span>,
+  <span class="hljs-attr">standalone</span>: <span class="hljs-literal">true</span>,
+  <span class="hljs-attr">imports</span>: [<span class="hljs-title class_">CommonModule</span>, <span class="hljs-title class_">RequiredPrimeNGModule</span>],
+  <span class="hljs-attr">templateUrl</span>: <span class="hljs-string">&#x27;./component-name.component.html&#x27;</span>,
+  <span class="hljs-attr">styleUrls</span>: [<span class="hljs-string">&#x27;./component-name.component.scss&#x27;</span>]
+})
+</code></pre>
+</li>
+<li><strong>Type Safety:</strong> Use strict TypeScript. Avoid <code>any</code>. Define interfaces for all component inputs/outputs.</li>
+<li><strong>Selector Prefix:</strong> All component selectors MUST start with <code>inf-</code> prefix.</li>
+<li><strong>No Manual CSS:</strong> Component styling must leverage design system tokens via SCSS imports or CSS variables.</li>
+<li><strong>Testing Required:</strong> Every component must have a corresponding <code>.spec.ts</code> file with Jest tests.</li>
+</ul>
+<h2 id="5-commit--versioning-rules">5. Commit &amp; Versioning Rules</h2>
+<ul>
+<li><strong>Commit Format:</strong> Follow conventional commits with these types:<pre><code>feat | fix | docs | style | refactor | perf | test | build | ci | chore | revert
+</code></pre>
+</li>
+<li><strong>Header Length:</strong> Maximum 72 characters</li>
+<li><strong>Version Bumping:</strong>
+<ul>
+<li>Alpha releases: <code>npm run buildAlphaPackage</code> → <code>npm run publishAlphaPackage</code></li>
+<li>Production releases: <code>npm run buildPackage</code> → <code>npm run publishPackage</code></li>
+<li>Cross-package sync: <code>npm run bumppatch</code> (syncs all package versions)</li>
+</ul>
+</li>
+</ul>
+<h2 id="6-development-workflow">6. Development Workflow</h2>
+<ul>
+<li><strong>Quick Start:</strong> <code>sh run-prime.bat</code> or <code>.\run-prime.bat</code> launches all dev servers</li>
+<li><strong>Testing:</strong> <code>npm test</code> runs Jest test suite</li>
+<li><strong>Linting:</strong> <code>npm run lint</code> runs ESLint checks</li>
+<li><strong>Documentation:</strong> <code>npm run compodoc:serve</code> generates and serves component docs</li>
+</ul>
+<h2 id="7-package-dependencies">7. Package Dependencies</h2>
+<ul>
+<li><strong>Private Feed:</strong> Components depend on <code>@infrabel</code> packages requiring authentication:
+<ul>
+<li>Windows: <code>vsts-npm-auth -config .npmrc</code></li>
+<li>Linux/Mac: Manual PAT token in <code>.npmrc</code></li>
+</ul>
+</li>
+<li><strong>Peer Dependencies Pattern:</strong><pre><code class="language-json"><span class="hljs-attr">&quot;peerDependencies&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;@infrabel/infrabel-designsystem&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;^3.x.x&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;@infrabel/infrabel-theme-primeng&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;^17.x.x&quot;</span>
+<span class="hljs-punctuation">}</span>
+</code></pre>
+</li>
+</ul>
+<h2 id="8-component-creation-checklist">8. Component Creation Checklist</h2>
+<p>When creating a new component, ensure:</p>
+<ul class="contains-task-list">
+<li class="task-list-item enabled"><input class="task-list-item-checkbox"type="checkbox"> Component is standalone with explicit imports</li>
+<li class="task-list-item enabled"><input class="task-list-item-checkbox"type="checkbox"> Selector uses <code>inf-</code> prefix</li>
+<li class="task-list-item enabled"><input class="task-list-item-checkbox"type="checkbox"> Styles use design system tokens only</li>
+<li class="task-list-item enabled"><input class="task-list-item-checkbox"type="checkbox"> Unit tests exist in <code>.spec.ts</code> file</li>
+<li class="task-list-item enabled"><input class="task-list-item-checkbox"type="checkbox"> Component is exported in public-api.ts barrel</li>
+<li class="task-list-item enabled"><input class="task-list-item-checkbox"type="checkbox"> JSDoc comments document all @Input/@Output</li>
+<li class="task-list-item enabled"><input class="task-list-item-checkbox"type="checkbox"> Demo page created in <code>5-angular-quickstart/</code> if applicable</li>
+</ul>
+
+            
+            
+        </body>
+        </html>

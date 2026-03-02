@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <title>Release Skills - Infrabel Design System v3</title>
+            <style>
+/* From extension vscode.github */
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+.vscode-dark img[src$=\#gh-light-mode-only],
+.vscode-light img[src$=\#gh-dark-mode-only],
+.vscode-high-contrast:not(.vscode-high-contrast-light) img[src$=\#gh-light-mode-only],
+.vscode-high-contrast-light img[src$=\#gh-dark-mode-only] {
+	display: none;
+}
+
+</style>
+            <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex/dist/katex.min.css">
+<link href="https://cdn.jsdelivr.net/npm/katex-copytex@latest/dist/katex-copytex.min.css" rel="stylesheet" type="text/css">
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Microsoft/vscode/extensions/markdown-language-features/media/markdown.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Microsoft/vscode/extensions/markdown-language-features/media/highlight.css">
+<style>
+            body {
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe WPC', 'Segoe UI', system-ui, 'Ubuntu', 'Droid Sans', sans-serif;
+                font-size: 18px;
+                line-height: 1.6;
+            }
+        </style>
+        <style>
+.task-list-item {
+    list-style-type: none;
+}
+
+.task-list-item-checkbox {
+    margin-left: -20px;
+    vertical-align: middle;
+    pointer-events: none;
+}
+</style>
+<style>
+:root {
+  --color-note: #0969da;
+  --color-tip: #1a7f37;
+  --color-warning: #9a6700;
+  --color-severe: #bc4c00;
+  --color-caution: #d1242f;
+  --color-important: #8250df;
+}
+
+</style>
+<style>
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-note: #2f81f7;
+    --color-tip: #3fb950;
+    --color-warning: #d29922;
+    --color-severe: #db6d28;
+    --color-caution: #f85149;
+    --color-important: #a371f7;
+  }
+}
+
+</style>
+<style>
+.markdown-alert {
+  padding: 0.5rem 1rem;
+  margin-bottom: 16px;
+  color: inherit;
+  border-left: .25em solid #888;
+}
+
+.markdown-alert>:first-child {
+  margin-top: 0
+}
+
+.markdown-alert>:last-child {
+  margin-bottom: 0
+}
+
+.markdown-alert .markdown-alert-title {
+  display: flex;
+  font-weight: 500;
+  align-items: center;
+  line-height: 1
+}
+
+.markdown-alert .markdown-alert-title .octicon {
+  margin-right: 0.5rem;
+  display: inline-block;
+  overflow: visible !important;
+  vertical-align: text-bottom;
+  fill: currentColor;
+}
+
+.markdown-alert.markdown-alert-note {
+  border-left-color: var(--color-note);
+}
+
+.markdown-alert.markdown-alert-note .markdown-alert-title {
+  color: var(--color-note);
+}
+
+.markdown-alert.markdown-alert-important {
+  border-left-color: var(--color-important);
+}
+
+.markdown-alert.markdown-alert-important .markdown-alert-title {
+  color: var(--color-important);
+}
+
+.markdown-alert.markdown-alert-warning {
+  border-left-color: var(--color-warning);
+}
+
+.markdown-alert.markdown-alert-warning .markdown-alert-title {
+  color: var(--color-warning);
+}
+
+.markdown-alert.markdown-alert-tip {
+  border-left-color: var(--color-tip);
+}
+
+.markdown-alert.markdown-alert-tip .markdown-alert-title {
+  color: var(--color-tip);
+}
+
+.markdown-alert.markdown-alert-caution {
+  border-left-color: var(--color-caution);
+}
+
+.markdown-alert.markdown-alert-caution .markdown-alert-title {
+  color: var(--color-caution);
+}
+
+</style>
+        
+        </head>
+        <body class="vscode-body vscode-light">
+            <hr>
+<h2 id="name-release-skillsdescription-release-workflow-for-infrabel-design-system-v3-monorepo-use-when-user-says-release-new-version-bump-version-or-wants-to-publish-changes-bumps-versions-in-each-packagejson-separately-creates-version-tags-and-compares-tags-to-generate-the-changelog-must-be-used-before-any-git-push-with-uncommitted-changes">name: release-skills
+description: Release workflow for Infrabel Design System v3 monorepo. Use when user says &quot;release&quot;, &quot;new version&quot;, &quot;bump version&quot;, or wants to publish changes. Bumps versions in each package.json separately, creates version tags, and compares tags to generate the changelog. MUST be used before any git push with uncommitted changes.</h2>
+<h1 id="release-skills---infrabel-design-system-v3">Release Skills - Infrabel Design System v3</h1>
+<p>Automate the release process for the Infrabel Design System monorepo: bump versions in each package separately, create tags, compare tags, and generate changelog.</p>
+<h2 id="critical-mandatory-release-checklist">CRITICAL: Mandatory Release Checklist</h2>
+<p><strong>NEVER skip these steps when releasing:</strong></p>
+<ol>
+<li>✅ Bump version in each package.json separately</li>
+<li>✅ Commit version changes</li>
+<li>✅ Create version tag</li>
+<li>✅ Compare with previous tag to update <a href="http://CHANGELOG.html">CHANGELOG.md</a></li>
+<li>✅ Commit changelog updates</li>
+<li>✅ Create final release tag</li>
+</ol>
+<p><strong>If user says &quot;just push&quot; - STILL follow all steps above first!</strong></p>
+<h2 id="when-to-use">When to Use</h2>
+<p>Trigger this skill when user requests:</p>
+<ul>
+<li>&quot;release&quot;, &quot;create release&quot;, &quot;new version&quot;</li>
+<li>&quot;bump version&quot;, &quot;update version&quot;</li>
+<li>&quot;prepare release&quot;</li>
+<li>&quot;push to remote&quot; (with uncommitted changes)</li>
+</ul>
+<h2 id="package-structure">Package Structure</h2>
+<p>The monorepo contains these packages that need version management:</p>
+<table>
+<thead>
+<tr>
+<th>Package</th>
+<th>Location</th>
+<th>Current Version Pattern</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Root</strong></td>
+<td><code>./package.json</code></td>
+<td><code>18.x.x</code></td>
+</tr>
+<tr>
+<td><strong>Components Angular v18</strong></td>
+<td><code>./3-infrabel-components-angular/infrabel-components-angular-v18/package.json</code></td>
+<td><code>18.x.x</code></td>
+</tr>
+<tr>
+<td><strong>Components Angular v18 (lib)</strong></td>
+<td><code>./3-infrabel-components-angular/infrabel-components-angular-v18/projects/infrabel-components-angular/package.json</code></td>
+<td><code>18.x.x</code></td>
+</tr>
+<tr>
+<td><strong>Design System Core</strong></td>
+<td><code>./1-infrabel-designsystem/package.json</code></td>
+<td><code>3.0.x</code></td>
+</tr>
+<tr>
+<td><strong>PrimeNG Theme</strong></td>
+<td><code>./2-infrabel-theme-primeng/infrabel-theme-primeng-v17/package.json</code></td>
+<td><code>17.0.x</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="workflow">Workflow</h2>
+<h3 id="step-1-analyze-changes-between-tags">Step 1: Analyze Changes Between Tags</h3>
+<pre><code class="language-bash"><span class="hljs-comment"># Get the latest version tags</span>
+LAST_TAG=$(git tag --<span class="hljs-built_in">sort</span>=-v:refname | <span class="hljs-built_in">head</span> -1)
+PREVIOUS_TAG=$(git tag --<span class="hljs-built_in">sort</span>=-v:refname | <span class="hljs-built_in">head</span> -2 | <span class="hljs-built_in">tail</span> -1)
+
+<span class="hljs-comment"># Show changes since last tag (for new release)</span>
+git <span class="hljs-built_in">log</span> <span class="hljs-variable">${LAST_TAG}</span>..HEAD --oneline
+git diff <span class="hljs-variable">${LAST_TAG}</span>..HEAD --<span class="hljs-built_in">stat</span>
+
+<span class="hljs-comment"># Compare two specific tags (for changelog generation)</span>
+git <span class="hljs-built_in">log</span> <span class="hljs-variable">${PREVIOUS_TAG}</span>..<span class="hljs-variable">${LAST_TAG}</span> --oneline
+</code></pre>
+<p>Categorize changes by type based on commit messages:</p>
+<table>
+<thead>
+<tr>
+<th>Type</th>
+<th>Prefix</th>
+<th>Emoji</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>feat</td>
+<td><code>feat:</code></td>
+<td>✨</td>
+<td>New features, components</td>
+</tr>
+<tr>
+<td>fix</td>
+<td><code>fix:</code></td>
+<td>🐛</td>
+<td>Bug fixes</td>
+</tr>
+<tr>
+<td>style</td>
+<td><code>style:</code></td>
+<td>🎨</td>
+<td>Style/CSS changes</td>
+</tr>
+<tr>
+<td>ci</td>
+<td><code>ci:</code></td>
+<td>👷</td>
+<td>CI/CD updates</td>
+</tr>
+<tr>
+<td>chore</td>
+<td><code>chore:</code></td>
+<td>🔧</td>
+<td>Maintenance</td>
+</tr>
+<tr>
+<td>docs</td>
+<td><code>docs:</code></td>
+<td>📚</td>
+<td>Documentation</td>
+</tr>
+<tr>
+<td>refactor</td>
+<td><code>refactor:</code></td>
+<td>♻️</td>
+<td>Code refactoring</td>
+</tr>
+<tr>
+<td>test</td>
+<td><code>test:</code></td>
+<td>✅</td>
+<td>Test updates</td>
+</tr>
+<tr>
+<td>perf</td>
+<td><code>perf:</code></td>
+<td>⚡</td>
+<td>Performance</td>
+</tr>
+</tbody>
+</table>
+<h3 id="step-2-determine-version-bump-type">Step 2: Determine Version Bump Type</h3>
+<p>Version rules:</p>
+<ul>
+<li><strong>Patch</strong> (18.0.18 → 18.0.19): Bug fixes, style updates, minor improvements</li>
+<li><strong>Minor</strong> (18.0.x → 18.1.0): New components, significant features</li>
+<li><strong>Major</strong> (18.x → 19.0): Breaking changes, Angular version upgrades</li>
+</ul>
+<p>Default behavior:</p>
+<ul>
+<li>If changes include <code>feat:</code> with new components → Minor bump</li>
+<li>Otherwise → Patch bump</li>
+</ul>
+<h3 id="step-3-bump-versions-in-each-package-separately">Step 3: Bump Versions in Each Package Separately</h3>
+<p><strong>IMPORTANT</strong>: Update each package.json individually, confirming each one before proceeding.</p>
+<h4 id="31-root-packagejson">3.1 Root package.json</h4>
+<pre><code class="language-bash"><span class="hljs-built_in">cd</span> .
+npm version patch --no-git-tag-version
+<span class="hljs-comment"># Current: 18.0.18 → New: 18.0.19</span>
+</code></pre>
+<h4 id="32-components-angular-v18-main">3.2 Components Angular v18 (main)</h4>
+<pre><code class="language-bash"><span class="hljs-built_in">cd</span> ./3-infrabel-components-angular/infrabel-components-angular-v18
+npm version patch --no-git-tag-version
+<span class="hljs-comment"># Current: 18.0.18 → New: 18.0.19</span>
+</code></pre>
+<h4 id="33-components-angular-v18-library">3.3 Components Angular v18 (library)</h4>
+<pre><code class="language-bash"><span class="hljs-built_in">cd</span> ./3-infrabel-components-angular/infrabel-components-angular-v18/projects/infrabel-components-angular
+npm version patch --no-git-tag-version
+<span class="hljs-comment"># Current: 18.0.18 → New: 18.0.19</span>
+</code></pre>
+<h4 id="34-design-system-core">3.4 Design System Core</h4>
+<pre><code class="language-bash"><span class="hljs-built_in">cd</span> ./1-infrabel-designsystem
+npm version patch --no-git-tag-version
+<span class="hljs-comment"># Current: 3.0.24 → New: 3.0.25</span>
+</code></pre>
+<h4 id="35-primeng-theme">3.5 PrimeNG Theme</h4>
+<pre><code class="language-bash"><span class="hljs-built_in">cd</span> ./2-infrabel-theme-primeng/infrabel-theme-primeng-v17
+npm version patch --no-git-tag-version
+<span class="hljs-comment"># Current: 17.0.28 → New: 17.0.29</span>
+</code></pre>
+<p><strong>Alternative</strong>: Use the existing bumppatch script for synchronized updates:</p>
+<pre><code class="language-bash">npm run bumppatch
+</code></pre>
+<h3 id="step-4-commit-version-changes--create-pre-changelog-tag">Step 4: Commit Version Changes &amp; Create Pre-Changelog Tag</h3>
+<pre><code class="language-bash">git add -A
+git commit -m <span class="hljs-string">&quot;chore(release): bump versions to {NEW_VERSION}&quot;</span>
+git tag v{NEW_VERSION}-pre
+</code></pre>
+<h3 id="step-5-compare-tags-and-generate-changelog">Step 5: Compare Tags and Generate Changelog</h3>
+<p>Compare the new pre-tag with the previous release tag to identify all changes:</p>
+<pre><code class="language-bash"><span class="hljs-comment"># Get previous release tag</span>
+PREV_RELEASE=$(git tag --<span class="hljs-built_in">sort</span>=-v:refname | grep -v <span class="hljs-string">&quot;pre&quot;</span> | <span class="hljs-built_in">head</span> -1)
+
+<span class="hljs-comment"># Generate changelog content from comparison</span>
+git <span class="hljs-built_in">log</span> <span class="hljs-variable">${PREV_RELEASE}</span>..v{NEW_VERSION}-pre --oneline --pretty=format:<span class="hljs-string">&quot;%s (%h)&quot;</span>
+</code></pre>
+<h3 id="step-6-update-changelogmd">Step 6: Update <a href="http://CHANGELOG.html">CHANGELOG.md</a></h3>
+<p>Insert new section after the header, following this format:</p>
+<pre><code class="language-markdown"><span class="hljs-section">## [{NEW<span class="hljs-emphasis">_VERSION}] - {YYYY-MM-DD}
+
+### Features
+- feat: description of feature (commit_</span>hash)</span>
+
+<span class="hljs-section">### Bug Fixes</span>
+<span class="hljs-bullet">-</span> fix(scope): description of fix (commit<span class="hljs-emphasis">_hash)
+
+### Styles
+- style(component): description of style change (commit_</span>hash)
+
+<span class="hljs-section">### CI/CD</span>
+<span class="hljs-bullet">-</span> ci: description of CI change (commit<span class="hljs-emphasis">_hash)
+
+### Chore
+- chore: description of maintenance (commit_</span>hash)
+
+<span class="hljs-section">### Documentation</span>
+<span class="hljs-bullet">-</span> docs: description of docs change (commit<span class="hljs-emphasis">_hash)
+
+### Refactor
+- refactor: description of refactoring (commit_</span>hash)
+
+<span class="hljs-section">### Tests</span>
+<span class="hljs-bullet">-</span> test: description of test change (commit<span class="hljs-emphasis">_hash)
+
+### Performance
+- perf: description of perf improvement (commit_</span>hash)
+</code></pre>
+<p>Only include sections that have changes. Omit empty sections.</p>
+<h3 id="step-7-commit-changelog--create-final-tag">Step 7: Commit Changelog &amp; Create Final Tag</h3>
+<pre><code class="language-bash">git add CHANGELOG.md
+git commit -m <span class="hljs-string">&quot;docs(changelog): update changelog for v{NEW_VERSION}&quot;</span>
+git tag v{NEW_VERSION}
+git tag -d v{NEW_VERSION}-pre  <span class="hljs-comment"># Remove pre-tag</span>
+</code></pre>
+<h2 id="options">Options</h2>
+<table>
+<thead>
+<tr>
+<th>Flag</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--dry-run</code></td>
+<td>Preview changes without executing</td>
+</tr>
+<tr>
+<td><code>--major</code></td>
+<td>Force major version bump</td>
+</tr>
+<tr>
+<td><code>--minor</code></td>
+<td>Force minor version bump</td>
+</tr>
+<tr>
+<td><code>--patch</code></td>
+<td>Force patch version bump (default)</td>
+</tr>
+<tr>
+<td><code>--alpha</code></td>
+<td>Create alpha prerelease version</td>
+</tr>
+<tr>
+<td><code>--from-tag &lt;tag&gt;</code></td>
+<td>Specify starting tag for comparison</td>
+</tr>
+<tr>
+<td><code>--to-tag &lt;tag&gt;</code></td>
+<td>Specify ending tag for comparison</td>
+</tr>
+<tr>
+<td><code>--package &lt;name&gt;</code></td>
+<td>Bump only specific package</td>
+</tr>
+</tbody>
+</table>
+<h2 id="dry-run-mode">Dry-Run Mode</h2>
+<p>When <code>--dry-run</code> is specified:</p>
+<ol>
+<li>Show all changes since last tag</li>
+<li>Show proposed version bumps for each package</li>
+<li>Show draft changelog entries</li>
+<li>Show files that would be modified</li>
+<li>Do NOT make any actual changes</li>
+</ol>
+<p>Output format:</p>
+<pre><code>=== DRY RUN MODE ===
+
+Last release tag: v18.0.18
+Proposed version: v18.0.19
+
+Package versions to update:
+┌─────────────────────────────────┬─────────────┬─────────────┐
+│ Package                         │ Current     │ New         │
+├─────────────────────────────────┼─────────────┼─────────────┤
+│ Root                            │ 18.0.18     │ 18.0.19     │
+│ Components Angular v18          │ 18.0.18     │ 18.0.19     │
+│ Components Angular v18 (lib)    │ 18.0.18     │ 18.0.19     │
+│ Design System Core              │ 3.0.24      │ 3.0.25      │
+│ PrimeNG Theme                   │ 17.0.28     │ 17.0.29     │
+└─────────────────────────────────┴─────────────┴─────────────┘
+
+Changes detected:
+- feat(component): new data-tag component
+- fix(core): fixing non correct scss
+- style(table): surface colors update
+
+Changelog preview:
+## [18.0.19] - 2026-01-22
+### Features
+- feat(component): new data-tag component (a1171649)
+### Bug Fixes
+- fix(core): fixing non correct scss (63326c6b)
+### Styles
+- style(table): surface colors update (58c44a81)
+
+No changes made. Run without --dry-run to execute.
+</code></pre>
+<h2 id="alpha-release-workflow">Alpha Release Workflow</h2>
+<p>For alpha/prerelease versions:</p>
+<pre><code class="language-bash"><span class="hljs-comment"># Bump to alpha version</span>
+npm version prerelease --preid=alpha --no-git-tag-version
+
+<span class="hljs-comment"># Example: 18.0.19 → 18.0.20-alpha.0</span>
+</code></pre>
+<h2 id="example-usage">Example Usage</h2>
+<pre><code>/release              # Auto-detect version bump, update all packages
+/release --dry-run    # Preview only
+/release --minor      # Force minor bump across all packages
+/release --alpha      # Create alpha prerelease
+/release --from-tag v18.0.17 --to-tag v18.0.18  # Compare specific tags
+</code></pre>
+<h2 id="post-release-reminder">Post-Release Reminder</h2>
+<p>After successful release, remind user:</p>
+<pre><code>Release v{NEW_VERSION} created locally.
+
+To publish:
+  git push origin main
+  git push origin v{NEW_VERSION}
+
+To publish packages:
+  npm run publishPackage        # For production
+  npm run publishAlphaPackage   # For alpha releases
+</code></pre>
+<h2 id="changelog-generation-script">Changelog Generation Script</h2>
+<p>For automated changelog generation, use the existing script:</p>
+<pre><code class="language-bash">./generate-changelog.sh components --from-tag v18.0.17 --to-tag v18.0.18
+</code></pre>
+<p>See <code>docs/CHANGELOG-GENERATION-GUIDE.md</code> for full documentation.</p>
+
+            <script async src="https://cdn.jsdelivr.net/npm/katex-copytex@latest/dist/katex-copytex.min.js"></script>
+            
+        </body>
+        </html>

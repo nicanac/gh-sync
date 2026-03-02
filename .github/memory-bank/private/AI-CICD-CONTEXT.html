@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <title>AI Agent Context&colon; CI&sol;CD Pipeline &amp; Release System</title>
+            <style>
+/* From extension vscode.github */
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+.vscode-dark img[src$=\#gh-light-mode-only],
+.vscode-light img[src$=\#gh-dark-mode-only],
+.vscode-high-contrast:not(.vscode-high-contrast-light) img[src$=\#gh-light-mode-only],
+.vscode-high-contrast-light img[src$=\#gh-dark-mode-only] {
+	display: none;
+}
+
+</style>
+            
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Microsoft/vscode/extensions/markdown-language-features/media/markdown.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Microsoft/vscode/extensions/markdown-language-features/media/highlight.css">
+<style>
+            body {
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe WPC', 'Segoe UI', system-ui, 'Ubuntu', 'Droid Sans', sans-serif;
+                font-size: 18px;
+                line-height: 1.6;
+            }
+        </style>
+        <style>
+.task-list-item {
+    list-style-type: none;
+}
+
+.task-list-item-checkbox {
+    margin-left: -20px;
+    vertical-align: middle;
+    pointer-events: none;
+}
+</style>
+<style>
+:root {
+  --color-note: #0969da;
+  --color-tip: #1a7f37;
+  --color-warning: #9a6700;
+  --color-severe: #bc4c00;
+  --color-caution: #d1242f;
+  --color-important: #8250df;
+}
+
+</style>
+<style>
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-note: #2f81f7;
+    --color-tip: #3fb950;
+    --color-warning: #d29922;
+    --color-severe: #db6d28;
+    --color-caution: #f85149;
+    --color-important: #a371f7;
+  }
+}
+
+</style>
+<style>
+.markdown-alert {
+  padding: 0.5rem 1rem;
+  margin-bottom: 16px;
+  color: inherit;
+  border-left: .25em solid #888;
+}
+
+.markdown-alert>:first-child {
+  margin-top: 0
+}
+
+.markdown-alert>:last-child {
+  margin-bottom: 0
+}
+
+.markdown-alert .markdown-alert-title {
+  display: flex;
+  font-weight: 500;
+  align-items: center;
+  line-height: 1
+}
+
+.markdown-alert .markdown-alert-title .octicon {
+  margin-right: 0.5rem;
+  display: inline-block;
+  overflow: visible !important;
+  vertical-align: text-bottom;
+  fill: currentColor;
+}
+
+.markdown-alert.markdown-alert-note {
+  border-left-color: var(--color-note);
+}
+
+.markdown-alert.markdown-alert-note .markdown-alert-title {
+  color: var(--color-note);
+}
+
+.markdown-alert.markdown-alert-important {
+  border-left-color: var(--color-important);
+}
+
+.markdown-alert.markdown-alert-important .markdown-alert-title {
+  color: var(--color-important);
+}
+
+.markdown-alert.markdown-alert-warning {
+  border-left-color: var(--color-warning);
+}
+
+.markdown-alert.markdown-alert-warning .markdown-alert-title {
+  color: var(--color-warning);
+}
+
+.markdown-alert.markdown-alert-tip {
+  border-left-color: var(--color-tip);
+}
+
+.markdown-alert.markdown-alert-tip .markdown-alert-title {
+  color: var(--color-tip);
+}
+
+.markdown-alert.markdown-alert-caution {
+  border-left-color: var(--color-caution);
+}
+
+.markdown-alert.markdown-alert-caution .markdown-alert-title {
+  color: var(--color-caution);
+}
+
+</style>
+        
+        </head>
+        <body class="vscode-body vscode-light">
+            <h1 id="ai-agent-context-cicd-pipeline--release-system">AI Agent Context: CI/CD Pipeline &amp; Release System</h1>
+<blockquote>
+<p><strong>Purpose</strong>: Hand this document to any AI agent to give it full operational awareness of the Infrabel Design System v3 CI/CD system.
+<strong>Last updated</strong>: 2026-02-23
+<strong>Maintainer</strong>: <a href="mailto:nicolas.bruyere@infrabel.be">nicolas.bruyere@infrabel.be</a>
+<strong>Related docs</strong>: <a href="release-workflow-reference.html">release-workflow-reference.md</a> | <a href="release-process-improvements.html">release-process-improvements.md</a></p>
+</blockquote>
+<hr>
+<h2 id="1-project-identity">1. Project Identity</h2>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Repo</strong></td>
+<td><code>a1831-ds</code> (Azure DevOps: <code>https://dev.azure.com/INFRABEL/a1831-ds</code>)</td>
+</tr>
+<tr>
+<td><strong>Type</strong></td>
+<td>Monorepo with 5 packages</td>
+</tr>
+<tr>
+<td><strong>Tech</strong></td>
+<td>Angular 18, PrimeNG 17, SCSS, Webpack</td>
+</tr>
+<tr>
+<td><strong>Node</strong></td>
+<td>18.19 (used by all pipelines)</td>
+</tr>
+<tr>
+<td><strong>npm scope</strong></td>
+<td><code>@infrabel/*</code></td>
+</tr>
+<tr>
+<td><strong>Current version</strong></td>
+<td>Root: <code>18.0.22</code>, CSS: <code>3.0.28</code>, PrimeNG Theme: <code>17.0.32</code>, Angular v18: <code>18.0.22</code></td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="2-package-map">2. Package Map</h2>
+<pre><code>a1831-ds/
+├── 1-infrabel-designsystem/          → @infrabel/infrabel-designsystem (CSS/SCSS)
+├── 2-infrabel-theme-primeng/v17/     → @infrabel/infrabel-theme-primeng (PrimeNG theme)
+├── 3-infrabel-components-angular/v18/→ @infrabel/infrabel-components-angular (Angular lib)
+├── 3-infrabel-components-angular/v20/→ Future Angular 20 migration (not released yet)
+├── 4-infrabel-theme-bootstrap/v5/    → Bootstrap theme (not in active release cycle)
+├── 7-release/                        → All pipeline YAML definitions (9 files)
+└── scripts/automate-release.sh       → Release automation script
+</code></pre>
+<hr>
+<h2 id="3-release-flow-current-state">3. Release Flow (Current State)</h2>
+<pre><code>LOCAL                          AZURE DEVOPS                         NPM
+─────                          ────────────                         ───
+automate-release.sh            Tag push triggers:
+  ├─ bump versions               ├─ Pipeline 1852 → build PrimeNG ─→ Release Def 1 → npm publish
+  ├─ changelog                   ├─ Pipeline 1853 → build Angular ─→ Release Def 2 → npm publish
+  ├─ commit + tag                └─ Pipeline 1855 → build CSS ────→ Release Def 3 → npm publish
+  └─ MANUAL: push branch+tag
+</code></pre>
+<h3 id="tag-convention">Tag Convention</h3>
+<table>
+<thead>
+<tr>
+<th>Pattern</th>
+<th>Scope</th>
+<th style="text-align:center">Triggers pipelines?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>release-vX.Y.Z</code></td>
+<td>Stable release</td>
+<td style="text-align:center">Yes — all 3 build pipelines</td>
+</tr>
+<tr>
+<td><code>release-alpha-vX.Y.Z</code></td>
+<td>Alpha/test release</td>
+<td style="text-align:center">Yes — all 3 build pipelines</td>
+</tr>
+<tr>
+<td><code>vX.Y.Z</code></td>
+<td>Legacy (pre-2026)</td>
+<td style="text-align:center">No — pipelines expect <code>release-v*</code> prefix</td>
+</tr>
+</tbody>
+</table>
+<p><strong>IMPORTANT</strong>: Before Feb 2026, tags used <code>v{version}</code> pattern. The script was fixed to use <code>release-v{version}</code>. Old tags like <code>v18.0.22</code> still exist but do NOT trigger current pipelines.</p>
+<hr>
+<h2 id="4-pipeline-inventory">4. Pipeline Inventory</h2>
+<h3 id="build-pipelines-yaml">Build Pipelines (YAML)</h3>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Name</th>
+<th>YAML</th>
+<th>Triggers</th>
+<th>Artifact</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>1852</strong></td>
+<td><code>designsystemv3_infrabel-theme-primeng</code></td>
+<td><code>infrabel-theme-primeng-v17-official.yaml</code></td>
+<td><code>develop</code> (path) + tags <code>release-*</code></td>
+<td><code>infrabel-theme-primeng</code></td>
+<td><strong>Active</strong> — but triggers too broadly (<code>release-*</code> instead of <code>release-v*</code>)</td>
+</tr>
+<tr>
+<td><strong>1853</strong></td>
+<td><code>release-infrabel-components-angular-v18</code></td>
+<td><code>infrabel-components-angular-v18-release-official.yaml</code></td>
+<td>Tags: <code>release-v*</code>, <code>release-alpha-v*</code></td>
+<td><code>infrabel-components</code></td>
+<td><strong>Active</strong> — has lockfile normalization workaround</td>
+</tr>
+<tr>
+<td><strong>1854</strong></td>
+<td><code>designsystemv3_infrabel-css-style</code></td>
+<td><code>designsystemv3_infrabel-css-style.yml</code></td>
+<td>Tags: <code>release-v*</code>, <code>release-alpha-v*</code></td>
+<td><code>infrabel-designsystem</code></td>
+<td><strong>Active but redundant</strong> — duplicates pipeline 1855</td>
+</tr>
+<tr>
+<td><strong>1855</strong></td>
+<td><code>release-infrabel-designsystem-v3</code></td>
+<td><code>infrabel-designsystem-v3-release.yaml</code></td>
+<td>Tags: <code>release-v*</code>, <code>release-alpha-v*</code></td>
+<td><code>infrabel-designsystem</code></td>
+<td><strong>Active</strong> — THE CSS release pipeline</td>
+</tr>
+</tbody>
+</table>
+<h3 id="classic-release-definitions-ui-only-no-yaml">Classic Release Definitions (UI-only, no YAML)</h3>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Consumes Build</th>
+<th>Artifact Alias</th>
+<th>Action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>1</strong></td>
+<td>Pipeline 1852</td>
+<td><code>_designsystemv3_infrabel-theme-primeng</code></td>
+<td><code>npm publish</code> PrimeNG theme</td>
+</tr>
+<tr>
+<td><strong>2</strong></td>
+<td>Pipeline 1853</td>
+<td><code>_release-infrabel-components-angular-v18</code></td>
+<td><code>npm publish</code> Angular components</td>
+</tr>
+<tr>
+<td><strong>3</strong></td>
+<td>Pipeline 1855</td>
+<td><code>_release-infrabel-designsystem-v3</code></td>
+<td><code>npm publish</code> CSS package</td>
+</tr>
+</tbody>
+</table>
+<h3 id="duplicatevariant-yaml-files-inactive-or-ci-only">Duplicate/Variant YAML Files (inactive or CI-only)</h3>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Related To</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>infrabel-theme-primeng-v17.yaml</code></td>
+<td>PrimeNG</td>
+<td>CI variant, triggers on <code>develop</code></td>
+</tr>
+<tr>
+<td><code>infrabel-theme-primeng-v17-release.yaml</code></td>
+<td>PrimeNG</td>
+<td>Release variant, not used by pipeline 1852</td>
+</tr>
+<tr>
+<td><code>infrabel-components-angular-v18.yaml</code></td>
+<td>Angular v18</td>
+<td>CI variant, triggers on <code>develop</code></td>
+</tr>
+<tr>
+<td><code>infrabel-components-angular-v18-release.yaml</code></td>
+<td>Angular v18</td>
+<td>Release variant, not used by 1853</td>
+</tr>
+<tr>
+<td><code>infrabel-designsystem-v3.yaml</code></td>
+<td>CSS</td>
+<td>Variant, overlaps with 1854/1855</td>
+</tr>
+<tr>
+<td><code>infrabel-components-vanilla.yaml</code></td>
+<td>Vanilla</td>
+<td>Website build, separate</td>
+</tr>
+<tr>
+<td><code>designsystemv3_snippets_website.yml</code></td>
+<td>Website</td>
+<td>Snippets/docs site</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="5-known-issues-ranked-by-impact">5. Known Issues (Ranked by Impact)</h2>
+<h3 id="critical">CRITICAL</h3>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Issue</th>
+<th>Detail</th>
+<th>Workaround</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>K1</strong></td>
+<td>Old Artifactory URLs in lockfile</td>
+<td>Angular v18 <code>package-lock.json</code> has ~92 refs to <code>artifactory.msnet.railb.be</code> (dead host)</td>
+<td>PowerShell normalization step in pipeline 1853 rewrites URLs at build time</td>
+</tr>
+<tr>
+<td><strong>K2</strong></td>
+<td>Tag naming mismatch (legacy)</td>
+<td>Tags <code>v18.0.22</code> etc. exist but don't trigger pipelines expecting <code>release-v*</code></td>
+<td>Script now creates <code>release-v*</code> tags. Manual rerun tags exist: <code>release-v18.0.22-rerun1</code> through <code>-rerun4</code></td>
+</tr>
+<tr>
+<td><strong>K3</strong></td>
+<td>No automated push</td>
+<td><code>automate-release.sh</code> stops before pushing. Developer must manually run 2 git push commands</td>
+<td>Planned: <code>--push</code> flag</td>
+</tr>
+</tbody>
+</table>
+<h3 id="high">HIGH</h3>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Issue</th>
+<th>Detail</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>K4</strong></td>
+<td>No pipeline monitoring</td>
+<td>After push, zero feedback. Must poll Azure DevOps UI for 3 build + 3 release pipelines</td>
+</tr>
+<tr>
+<td><strong>K5</strong></td>
+<td>No build validation before tag</td>
+<td>If build breaks, tag already exists. v18.0.22 needed 5 retry tags</td>
+</tr>
+<tr>
+<td><strong>K6</strong></td>
+<td>No rollback mechanism</td>
+<td>If one package publishes but another fails, manual npm unpublish required</td>
+</tr>
+<tr>
+<td><strong>K7</strong></td>
+<td>Classic Release definitions can't be automated</td>
+<td><code>az pipelines release</code> fails due to vsrm auth scope. Config locked in UI</td>
+</tr>
+</tbody>
+</table>
+<h3 id="medium">MEDIUM</h3>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Issue</th>
+<th>Detail</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>K8</strong></td>
+<td>Duplicate CSS pipelines</td>
+<td>1854 and 1855 both build same CSS package; 1854 uses <code>buildAlphaPackage</code>, 1855 uses <code>buildPackage</code></td>
+</tr>
+<tr>
+<td><strong>K9</strong></td>
+<td>Inconsistent tag triggers</td>
+<td>Pipeline 1852 matches <code>release-*</code> (too broad), others match <code>release-v*</code> (correct)</td>
+</tr>
+<tr>
+<td><strong>K10</strong></td>
+<td>9 YAML files for 3 packages</td>
+<td>Confusing; changes must be replicated across variants</td>
+</tr>
+<tr>
+<td><strong>K11</strong></td>
+<td>PrimeNG pipeline rebuilds CSS</td>
+<td>Pipeline 1852 builds CSS as dependency, but 1855 also builds CSS independently</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="6-what-works-well">6. What Works Well</h2>
+<ul>
+<li><code>automate-release.sh</code> reliably bumps versions, generates changelogs, and creates tags</li>
+<li><code>--dry-run</code> and <code>--test-release</code> modes work correctly</li>
+<li><code>--packages</code> flag allows scoping (v18-only, all, custom)</li>
+<li>Branch naming convention enforced: <code>username/type/#ticket_description</code></li>
+<li>Commit convention respected: <code>type(scope): summary (#ticket)</code></li>
+<li>CD triggers on Classic Release definitions work once build succeeds</li>
+<li>Lockfile normalization workaround unblocks Angular v18 builds</li>
+</ul>
+<hr>
+<h2 id="7-improvement-roadmap">7. Improvement Roadmap</h2>
+<h3 id="phase-1-quick-wins-est-1-day">Phase 1: Quick Wins (est. 1 day)</h3>
+<ul class="contains-task-list">
+<li class="task-list-item enabled"><input class="task-list-item-checkbox"type="checkbox"> Add <code>--push</code> flag to <a href="http://automate-release.sh">automate-release.sh</a> (K3)</li>
+<li class="task-list-item enabled"><input class="task-list-item-checkbox"type="checkbox"> Add <code>--create-pr</code> flag with auto-complete (K4)</li>
+<li class="task-list-item enabled"><input class="task-list-item-checkbox"type="checkbox"> Standardize all pipelines to <code>release-v*</code> / <code>release-alpha-v*</code> triggers (K9)</li>
+<li class="task-list-item enabled"><input class="task-list-item-checkbox"type="checkbox"> Regenerate Angular v18 <code>package-lock.json</code> with correct registry (K1)</li>
+<li class="task-list-item enabled"><input class="task-list-item-checkbox"type="checkbox"> Designate pipeline 1854 as CI-only, remove tag triggers (K8)</li>
+</ul>
+<h3 id="phase-2-safety--monitoring-est-2-3-days">Phase 2: Safety &amp; Monitoring (est. 2-3 days)</h3>
+<ul class="contains-task-list">
+<li class="task-list-item enabled"><input class="task-list-item-checkbox"type="checkbox"> Add <code>--monitor</code> flag: poll build status via <code>az pipelines build show</code> (K4)</li>
+<li class="task-list-item enabled"><input class="task-list-item-checkbox"type="checkbox"> Add local build verification before tagging (K5)</li>
+<li class="task-list-item enabled"><input class="task-list-item-checkbox"type="checkbox"> Configure Azure DevOps build failure notifications</li>
+<li class="task-list-item enabled"><input class="task-list-item-checkbox"type="checkbox"> Add <code>--rollback &lt;version&gt;</code> command (K6)</li>
+</ul>
+<h3 id="phase-3-pipeline-consolidation-est-3-5-days">Phase 3: Pipeline Consolidation (est. 3-5 days)</h3>
+<ul class="contains-task-list">
+<li class="task-list-item enabled"><input class="task-list-item-checkbox"type="checkbox"> Consolidate 9 YAML files to 3 multi-stage + 1 orchestrator (K10)</li>
+<li class="task-list-item enabled"><input class="task-list-item-checkbox"type="checkbox"> Migrate Classic Releases to YAML deploy stages (K7)</li>
+<li class="task-list-item enabled"><input class="task-list-item-checkbox"type="checkbox"> CSS built once, shared via artifacts to PrimeNG (K11)</li>
+</ul>
+<h3 id="phase-4-full-automation-est-1-2-days">Phase 4: Full Automation (est. 1-2 days)</h3>
+<ul class="contains-task-list">
+<li class="task-list-item enabled"><input class="task-list-item-checkbox"type="checkbox"> Single <code>automate-release.sh --push --monitor</code> command does everything</li>
+<li class="task-list-item enabled"><input class="task-list-item-checkbox"type="checkbox"> Orchestrator pipeline handles build, publish, summary</li>
+<li class="task-list-item enabled"><input class="task-list-item-checkbox"type="checkbox"> Script receives pipeline result and exits 0/1</li>
+</ul>
+<hr>
+<h2 id="8-architecture-diagrams">8. Architecture Diagrams</h2>
+<h3 id="current-as-of-v18022">Current (as of v18.0.22)</h3>
+<pre><code>automate-release.sh
+    │
+    ├── Creates: Azure Boards Task
+    ├── Creates: Branch from develop
+    ├── Bumps: 5 package.json files
+    ├── Generates: CHANGELOG.md + CHANGELOG.html
+    ├── Tags: release-vX.Y.Z
+    └── Prints: manual push instructions
+         │
+    [MANUAL] git push origin &lt;branch&gt; + git push origin &lt;tag&gt;
+         │
+    ┌────┴─────────────────────────────────┐
+    │        Azure DevOps (triggered)       │
+    ├───────────────────────────────────────┤
+    │  Build 1852 ──→ Release Def 1 ──→ npm│  (PrimeNG)
+    │  Build 1853 ──→ Release Def 2 ──→ npm│  (Angular v18)
+    │  Build 1855 ──→ Release Def 3 ──→ npm│  (CSS)
+    │  Build 1854 (redundant, same as 1855)│
+    └───────────────────────────────────────┘
+</code></pre>
+<h3 id="target-after-phase-4">Target (after Phase 4)</h3>
+<pre><code>automate-release.sh --push --monitor
+    │
+    ├── Bump + changelog + tag + push + PR (all automated)
+    │
+    └── Triggers: release-orchestrator.yaml
+         │
+         ├── Stage: Build_CSS → Publish_CSS
+         ├── Stage: Build_PrimeNG (needs CSS) → Publish_PrimeNG
+         ├── Stage: Build_Angular → Publish_Angular
+         └── Stage: Release_Summary → exit 0/1
+</code></pre>
+<hr>
+<h2 id="9-key-commands-for-agents">9. Key Commands for Agents</h2>
+<pre><code class="language-bash"><span class="hljs-comment"># Azure DevOps defaults (ALWAYS set first)</span>
+az devops configure --defaults organization=https://dev.azure.com/INFRABEL project=a1831-ds
+
+<span class="hljs-comment"># Release (interactive)</span>
+bash ./scripts/automate-release.sh
+bash ./scripts/automate-release.sh --dry-run        <span class="hljs-comment"># simulate</span>
+bash ./scripts/automate-release.sh --test-release    <span class="hljs-comment"># alpha tags</span>
+
+<span class="hljs-comment"># Branch creation</span>
+npm run branch -- &lt;<span class="hljs-built_in">type</span>&gt; &lt;ticket-id&gt; &lt;description&gt;
+
+<span class="hljs-comment"># Monitor builds</span>
+az pipelines build list --definition-ids 1852 --top 3 \
+  --query <span class="hljs-string">&quot;[].{id:id,result:result,branch:sourceBranch}&quot;</span> -o table
+az pipelines build list --definition-ids 1853 --top 3 \
+  --query <span class="hljs-string">&quot;[].{id:id,result:result,branch:sourceBranch}&quot;</span> -o table
+az pipelines build list --definition-ids 1855 --top 3 \
+  --query <span class="hljs-string">&quot;[].{id:id,result:result,branch:sourceBranch}&quot;</span> -o table
+
+<span class="hljs-comment"># Check build artifacts</span>
+az rest --method get --resource <span class="hljs-string">&quot;499b84ac-1321-427f-aa17-267ca6975798&quot;</span> \
+  --url <span class="hljs-string">&quot;https://dev.azure.com/INFRABEL/a1831-ds/_apis/build/builds/&lt;ID&gt;/artifacts?api-version=7.1&quot;</span> \
+  --query <span class="hljs-string">&quot;value[].name&quot;</span> -o table
+
+<span class="hljs-comment"># Create PR</span>
+az repos <span class="hljs-built_in">pr</span> create --repository a1831-ds --source-branch &lt;branch&gt; \
+  --target-branch develop --title <span class="hljs-string">&quot;&lt;title&gt;&quot;</span> --work-items &lt;ticket&gt;
+</code></pre>
+<hr>
+<h2 id="10-critical-rules-for-any-agent-working-on-this-repo">10. Critical Rules for Any Agent Working on This Repo</h2>
+<ol>
+<li><strong>Never push directly to <code>main</code>, <code>master</code>, or <code>develop</code></strong> — always use a feature/chore/documentation branch.</li>
+<li><strong>Branch naming</strong>: <code>username/type/#ticket_description</code> (enforced by <code>scripts/create-branch.js</code>).</li>
+<li><strong>Commit format</strong>: <code>type(scope): summary (#ticket)</code> (enforced by commitlint).</li>
+<li><strong>Release tags MUST use <code>release-v</code> prefix</strong> — bare <code>v18.0.X</code> tags won't trigger any pipeline.</li>
+<li><strong>Angular v18 lockfile</strong> is fragile — if you run <code>npm install</code>, the lockfile may revert to old Artifactory URLs. Always verify.</li>
+<li><strong>Pipeline 1854 vs 1855</strong>: Both build CSS. Only 1855 feeds Release Def 3. Don't confuse them.</li>
+<li><strong>Classic Release definitions cannot be modified via CLI</strong> — use the Azure DevOps web UI.</li>
+<li><strong>The <code>vsrm</code> API requires a separate auth scope</strong> — <code>az pipelines release</code> will fail without it. Use REST API with resource ID <code>499b84ac-1321-427f-aa17-267ca6975798</code> instead.</li>
+<li><strong>After any pipeline change</strong>, test with <code>--test-release</code> (alpha tag) before a real release.</li>
+<li><strong>Azure DevOps org</strong>: <code>INFRABEL</code>, project: <code>a1831-ds</code>, repo: <code>a1831-ds</code> — always set defaults with <code>az devops configure</code>.</li>
+</ol>
+
+            
+            
+        </body>
+        </html>

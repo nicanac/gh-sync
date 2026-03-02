@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <title>Library Compliance Rules &mdash; &commat;infrabel&sol;infrabel-components-angular v18</title>
+            <style>
+/* From extension vscode.github */
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+.vscode-dark img[src$=\#gh-light-mode-only],
+.vscode-light img[src$=\#gh-dark-mode-only],
+.vscode-high-contrast:not(.vscode-high-contrast-light) img[src$=\#gh-light-mode-only],
+.vscode-high-contrast-light img[src$=\#gh-dark-mode-only] {
+	display: none;
+}
+
+</style>
+            <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex/dist/katex.min.css">
+<link href="https://cdn.jsdelivr.net/npm/katex-copytex@latest/dist/katex-copytex.min.css" rel="stylesheet" type="text/css">
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Microsoft/vscode/extensions/markdown-language-features/media/markdown.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Microsoft/vscode/extensions/markdown-language-features/media/highlight.css">
+<style>
+            body {
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe WPC', 'Segoe UI', system-ui, 'Ubuntu', 'Droid Sans', sans-serif;
+                font-size: 18px;
+                line-height: 1.6;
+            }
+        </style>
+        <style>
+.task-list-item {
+    list-style-type: none;
+}
+
+.task-list-item-checkbox {
+    margin-left: -20px;
+    vertical-align: middle;
+    pointer-events: none;
+}
+</style>
+<style>
+:root {
+  --color-note: #0969da;
+  --color-tip: #1a7f37;
+  --color-warning: #9a6700;
+  --color-severe: #bc4c00;
+  --color-caution: #d1242f;
+  --color-important: #8250df;
+}
+
+</style>
+<style>
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-note: #2f81f7;
+    --color-tip: #3fb950;
+    --color-warning: #d29922;
+    --color-severe: #db6d28;
+    --color-caution: #f85149;
+    --color-important: #a371f7;
+  }
+}
+
+</style>
+<style>
+.markdown-alert {
+  padding: 0.5rem 1rem;
+  margin-bottom: 16px;
+  color: inherit;
+  border-left: .25em solid #888;
+}
+
+.markdown-alert>:first-child {
+  margin-top: 0
+}
+
+.markdown-alert>:last-child {
+  margin-bottom: 0
+}
+
+.markdown-alert .markdown-alert-title {
+  display: flex;
+  font-weight: 500;
+  align-items: center;
+  line-height: 1
+}
+
+.markdown-alert .markdown-alert-title .octicon {
+  margin-right: 0.5rem;
+  display: inline-block;
+  overflow: visible !important;
+  vertical-align: text-bottom;
+  fill: currentColor;
+}
+
+.markdown-alert.markdown-alert-note {
+  border-left-color: var(--color-note);
+}
+
+.markdown-alert.markdown-alert-note .markdown-alert-title {
+  color: var(--color-note);
+}
+
+.markdown-alert.markdown-alert-important {
+  border-left-color: var(--color-important);
+}
+
+.markdown-alert.markdown-alert-important .markdown-alert-title {
+  color: var(--color-important);
+}
+
+.markdown-alert.markdown-alert-warning {
+  border-left-color: var(--color-warning);
+}
+
+.markdown-alert.markdown-alert-warning .markdown-alert-title {
+  color: var(--color-warning);
+}
+
+.markdown-alert.markdown-alert-tip {
+  border-left-color: var(--color-tip);
+}
+
+.markdown-alert.markdown-alert-tip .markdown-alert-title {
+  color: var(--color-tip);
+}
+
+.markdown-alert.markdown-alert-caution {
+  border-left-color: var(--color-caution);
+}
+
+.markdown-alert.markdown-alert-caution .markdown-alert-title {
+  color: var(--color-caution);
+}
+
+</style>
+        
+        </head>
+        <body class="vscode-body vscode-light">
+            <h1 id="library-compliance-rules--infrabelinfrabel-components-angular-v18">Library Compliance Rules — @infrabel/infrabel-components-angular v18</h1>
+<p>Reference: <code>ai_rules.md</code> in <code>3-infrabel-components-angular/infrabel-components-angular-v18/</code></p>
+<hr>
+<h2 id="lib-01--component-import-source">LIB-01 · Component Import Source</h2>
+<p><strong>Rule:</strong> All Infrabel components must be imported from <code>@infrabel/infrabel-components-angular</code>, never from deep paths.</p>
+<p><strong>Violation:</strong></p>
+<pre><code class="language-typescript"><span class="hljs-keyword">import</span> { <span class="hljs-title class_">ToastComponent</span> } <span class="hljs-keyword">from</span> <span class="hljs-string">&#x27;@infrabel/infrabel-components-angular/lib/toast/toast.component&#x27;</span>;
+</code></pre>
+<p><strong>Correct:</strong></p>
+<pre><code class="language-typescript"><span class="hljs-keyword">import</span> { <span class="hljs-title class_">ToastComponent</span> } <span class="hljs-keyword">from</span> <span class="hljs-string">&#x27;@infrabel/infrabel-components-angular&#x27;</span>;
+</code></pre>
+<hr>
+<h2 id="lib-02--selector-prefix">LIB-02 · Selector Prefix</h2>
+<p><strong>Rule:</strong> Infrabel component selectors use the <code>inf-</code> prefix (kebab-case). Directive selectors use the <code>inf</code> prefix (camelCase attribute). Never replicate or shadow these selectors in consumer code.</p>
+<p><strong>Violation:</strong> A consumer defines <code>selector: 'inf-button'</code> in their own component.</p>
+<hr>
+<h2 id="lib-03--no-hardcoded-design-tokens">LIB-03 · No Hardcoded Design Tokens</h2>
+<p><strong>Rule:</strong> Color, spacing, radius, and layout values must use CSS custom properties from the design system, never hardcoded values.</p>
+<p><strong>Severity:</strong> High</p>
+<p><strong>Violations to flag:</strong></p>
+<ul>
+<li><code>color: #025697</code> → use <code>var(--theme-primary)</code></li>
+<li><code>padding: 16px</code> → use <code>var(--spacing-5)</code> (= 1.6rem)</li>
+<li><code>border-radius: 8px</code> → use <code>var(--radius-m)</code> (= 0.8rem)</li>
+<li><code>color: white</code> on themed surfaces → use <code>var(--theme-text-invert)</code></li>
+<li><code>background: #f2f2f2</code> → use <code>var(--theme-surface-100)</code></li>
+</ul>
+<p><strong>Allowed exceptions:</strong> SVG viewport/stroke attributes, <code>z-index</code>, <code>transition</code> durations.</p>
+<hr>
+<h2 id="lib-04--toast-usage-via-toastcomponent--toastseverity">LIB-04 · Toast Usage via ToastComponent + ToastSeverity</h2>
+<p><strong>Rule:</strong> Use <code>&lt;inf-toast&gt;</code> + <code>MessageService</code> from PrimeNG. Use <code>ToastSeverity</code> enum for severity values.</p>
+<p><strong>Violation:</strong> Hardcoded string <code>severity: 'success'</code> → use <code>ToastSeverity.SUCCESS</code>.</p>
+<hr>
+<h2 id="lib-05--error-pages-via-inferrorpagecomponent">LIB-05 · Error Pages via InfErrorPageComponent</h2>
+<p><strong>Rule:</strong> HTTP error pages (401, 404, 500, 504) must use <code>&lt;inf-error-page [statusCode]=&quot;...&quot;&gt;</code> or the specific error page components. Do not build custom error pages from scratch.</p>
+<hr>
+<h2 id="lib-06--correct-infmenuitem-shape">LIB-06 · Correct InfMenuItem Shape</h2>
+<p><strong>Rule:</strong> Navigation model passed to <code>inf-nav</code>, <code>inf-mega-menu</code>, <code>inf-side-menu</code> must use the <code>InfMenuItem</code> interface. Do not extend or replace it with custom interfaces.</p>
+<p><strong>Key properties:</strong> <code>label</code>, <code>routerLink</code>, <code>icon</code>, <code>items</code>, <code>active</code>, <code>disabled</code>, <code>separator</code>.</p>
+<hr>
+<h2 id="lib-07--theme-tokens-for-darklight">LIB-07 · Theme Tokens for Dark/Light</h2>
+<p><strong>Rule:</strong> Consumer components that need to support dark/light themes must use <code>--theme-*</code> tokens. Never use <code>prefers-color-scheme</code> media queries directly in component SCSS — the library handles theme switching via <code>ThemeSwitchService</code> and CSS class on the root element.</p>
+<hr>
+<h2 id="lib-08--language-via-languageservice">LIB-08 · Language via LanguageService</h2>
+<p><strong>Rule:</strong> Language selection must use <code>LanguageService.setLanguage(Language.XX)</code>. Use the <code>Language</code> enum. Do not write to <code>localStorage</code> key <code>'lang'</code> directly.</p>
+<hr>
+<h2 id="lib-09--storagekey-enum">LIB-09 · StorageKey Enum</h2>
+<p><strong>Rule:</strong> Any access to the library's localStorage keys must use the <code>StorageKey</code> enum:</p>
+<ul>
+<li><code>StorageKey.LANG</code> (<code>'lang'</code>)</li>
+<li><code>StorageKey.THEME</code> (<code>'inf-theme'</code>)</li>
+<li><code>StorageKey.CONFIGURATION</code> (<code>'configuration'</code>)</li>
+</ul>
+<p><strong>Violation:</strong> <code>localStorage.getItem('inf-theme')</code> → use <code>StorageKey.THEME</code>.</p>
+<hr>
+<h2 id="lib-10--primeng-not-imported-directly-for-infrabel-wrapped-components">LIB-10 · PrimeNG Not Imported Directly for Infrabel-Wrapped Components</h2>
+<p><strong>Rule:</strong> If the library ships a wrapper for a PrimeNG component, consumers must use the wrapper, not PrimeNG directly.</p>
+<table>
+<thead>
+<tr>
+<th>Infrabel wrapper</th>
+<th>Do NOT use directly</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>inf-calendar</code></td>
+<td><code>p-calendar</code> for date selection</td>
+</tr>
+<tr>
+<td><code>inf-upload</code></td>
+<td><code>p-fileUpload</code> for file upload</td>
+</tr>
+<tr>
+<td><code>inf-loader</code></td>
+<td><code>p-progressSpinner</code> for loading states</td>
+</tr>
+<tr>
+<td><code>inf-toast</code></td>
+<td><code>p-toast</code> for notifications</td>
+</tr>
+<tr>
+<td><code>inf-message</code></td>
+<td><code>p-messages</code> for inline messages</td>
+</tr>
+<tr>
+<td><code>inf-table-filter</code></td>
+<td>raw <code>p-sidebar</code> for table filters</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="lib-11--changedata-model-for-phone-input">LIB-11 · ChangeData Model for Phone Input</h2>
+<p><strong>Rule:</strong> The <code>(onChangeData)</code> output of <code>inf-phone-input</code> emits <code>ChangeData</code>. Consumers must type their handler accordingly:</p>
+<pre><code class="language-typescript"><span class="hljs-title function_">onPhoneChange</span>(<span class="hljs-attr">data</span>: <span class="hljs-title class_">ChangeData</span>): <span class="hljs-built_in">void</span> { ... }
+</code></pre>
+<hr>
+<h2 id="lib-12--upload-interface-compliance">LIB-12 · Upload Interface Compliance</h2>
+<p><strong>Rule:</strong> <code>inf-upload</code> event handlers must use typed interfaces:</p>
+<ul>
+<li><code>(onSelect)</code> → <code>{ files: File[] }</code></li>
+<li><code>(onRename)</code> → <code>FileRenameEvent</code></li>
+<li>Files in progress → <code>InProgressFile</code></li>
+<li>Completed files → <code>UploadFile</code></li>
+</ul>
+<hr>
+<h2 id="lib-13--infutils-destroy-pattern">LIB-13 · InfUtils Destroy Pattern</h2>
+<p><strong>Rule:</strong> Components consuming library services via Observables must use <code>InfUtils.destroy()</code> for cleanup, not a manual <code>Subject&lt;void&gt;</code>.</p>
+<p><strong>Violation:</strong></p>
+<pre><code class="language-typescript"><span class="hljs-keyword">private</span> destroy$ = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Subject</span>&lt;<span class="hljs-built_in">void</span>&gt;();
+<span class="hljs-title function_">ngOnDestroy</span>(<span class="hljs-params"></span>) { <span class="hljs-variable language_">this</span>.<span class="hljs-property">destroy$</span>.<span class="hljs-title function_">next</span>(); <span class="hljs-variable language_">this</span>.<span class="hljs-property">destroy$</span>.<span class="hljs-title function_">complete</span>(); }
+</code></pre>
+<p><strong>Correct:</strong></p>
+<pre><code class="language-typescript"><span class="hljs-keyword">private</span> destroy$ = <span class="hljs-title class_">InfUtils</span>.<span class="hljs-title function_">destroy</span>();
+</code></pre>
+<hr>
+<h2 id="lib-14--infutilshandleinputfocus-in-appcomponent">LIB-14 · InfUtils.handleInputFocus in AppComponent</h2>
+<p><strong>Rule:</strong> Consumer <code>AppComponent</code> must call <code>InfUtils.handleInputFocus(document, renderer)</code> in <code>ngOnInit</code> to enable keyboard focus rings across the app.</p>
+<hr>
+<h2 id="lib-15--transloco-for-i18n-not-angular-built-in">LIB-15 · Transloco for i18n (not Angular built-in)</h2>
+<p><strong>Rule:</strong> Consumer apps that use Infrabel components must also use Transloco for i18n consistency. Do not mix Angular's built-in i18n (<code>$localize</code>) with Transloco.</p>
+<hr>
+<h2 id="lib-16--ng-deep-scoping">LIB-16 · ::ng-deep Scoping</h2>
+<p><strong>Rule:</strong> Any <code>::ng-deep</code> present in consumer SCSS must be scoped to <code>:host</code>. Unscoped <code>::ng-deep</code> at global level risks overriding library internals unintentionally.</p>
+<p><strong>Violation:</strong></p>
+<pre><code class="language-scss">::ng-deep .p-button { ... }  <span class="hljs-comment">// global — FORBIDDEN</span>
+</code></pre>
+<p><strong>Correct:</strong></p>
+<pre><code class="language-scss"><span class="hljs-selector-pseudo">:host</span> { ::ng-deep .p-button { ... } }
+</code></pre>
+<hr>
+<h2 id="lib-17--standalone-components-required-in-consumer">LIB-17 · Standalone Components Required in Consumer</h2>
+<p><strong>Rule:</strong> Consumer components that directly import Infrabel components must themselves be <code>standalone: true</code>. NgModule imports of Infrabel artifacts are not supported.</p>
+
+            <script async src="https://cdn.jsdelivr.net/npm/katex-copytex@latest/dist/katex-copytex.min.js"></script>
+            
+        </body>
+        </html>
