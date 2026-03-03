@@ -168,19 +168,20 @@ An intelligent Node.js script is included to automate your git pushes and commit
 
 Usage:
 ```bash
-# Interactive mode (Ask for Type, Ticket, Scope, Description)
+# Interactive mode (Asks for branch name, type, ticket, and description)
 node scripts/git-workflow.js
 
-# Unattended/Automation mode
-node scripts/git-workflow.js --type feat --ticket PROJ-123 --desc "add cool feature" --unattended
+# Unattended/Automation mode for AI or CI triggers
+node scripts/git-workflow.js --auto
 ```
 
 This script will:
-1. Parse your changes
-2. Generate a standard semantic branch name (e.g., `username/feat/PROJ-123-add-cool-feature`)
-3. Automatically add all files (if not pre-staged)
-4. Create a Conventional Commit
-5. Push your branch directly to the remote repository.
+1. Parse your changes intelligently.
+2. Interactively help generate a standard semantic branch name (e.g., `username/feat/PROJ-123-some-change`) and Conventional Commit.
+3. Automatically push changes to the remote.
+4. Optionally trigger `gh pr create` via the GitHub CLI.
+
+For more details on how AI agents can leverage this and the interactive TUI wrappers, see the [AI & Git Workflow Documentation](01-doc/12-AI-GIT-WORKFLOW.md).
 
 ---
 

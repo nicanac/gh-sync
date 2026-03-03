@@ -23,6 +23,7 @@ This folder contains a comprehensive documentation suite for the **gh-sync** pro
 | 09 | [Golden Source Content](./09-GOLDEN-SOURCE-CONTENT.md) | What the synced folders contain (agents, skills, prompts) |
 | 10 | [Developer Guide](./10-DEVELOPER-GUIDE.md) | How to contribute, coding conventions, extending the tool |
 | 11 | [Improvement Plan](./11-IMPROVEMENT-PLAN.md) | 5 prioritized improvements with 25 sub-tasks |
+| 12 | [AI & Git Workflow](./12-AI-GIT-WORKFLOW.md) | AI integrations, interactive menus, and conventional commits |
 
 ---
 
