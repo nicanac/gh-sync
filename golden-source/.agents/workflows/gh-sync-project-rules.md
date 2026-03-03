@@ -43,3 +43,4 @@ This automated command will:
 - **Read-Only Diffs**: The `diff` and `status` commands must never make modifications to the system.
 - **Interactive UI**: The `gh-sync-menu.sh` and `gh-sync-menu.ps1` wrappers provide guided experiences for humans. If you add heavy structural CLI flags, ensure these menus receive the new prompts.
 - **Documentation**: All new features must be documented in the `01-doc/` folder and registered in the `00-INDEX.md` and `README.md`.
+- **Repo Links**: When providing links to the GitHub repository (like PRs or issues), ALWAYS use the correct spelling `nicanac` for the username (e.g. `https://github.com/nicanac/gh-sync/...`) and NOT `nicnac`.
