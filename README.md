@@ -162,6 +162,28 @@ Both scripts provide a user-friendly menu to execute all commands, including:
 
 ---
 
+## Git Workflow Automation
+
+An intelligent Node.js script is included to automate your git pushes and commits while following Conventional Commits and Git Flow standards.
+
+Usage:
+```bash
+# Interactive mode (Ask for Type, Ticket, Scope, Description)
+node scripts/git-workflow.js
+
+# Unattended/Automation mode
+node scripts/git-workflow.js --type feat --ticket PROJ-123 --desc "add cool feature" --unattended
+```
+
+This script will:
+1. Parse your changes
+2. Generate a standard semantic branch name (e.g., `username/feat/PROJ-123-add-cool-feature`)
+3. Automatically add all files (if not pre-staged)
+4. Create a Conventional Commit
+5. Push your branch directly to the remote repository.
+
+---
+
 ## How it works
 
 - **Multi-folder sync** — syncs `.github`, `.agent`, `.agents`, `.claude` in one go
