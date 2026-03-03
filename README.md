@@ -141,6 +141,27 @@ gh-sync clean --keep 5
 
 ---
 
+## Interactive Menu (TUI)
+
+If you prefer a menu-driven interface instead of remembering commands and flags, `gh-sync` comes with interactive wrappers!
+
+**Bash / macOS / Linux / WSL:**
+```bash
+./gh-sync-menu.sh
+```
+
+**Windows PowerShell:**
+```powershell
+.\gh-sync-menu.ps1
+```
+
+Both scripts provide a user-friendly menu to execute all commands, including:
+- Checking sync status and viewing diffs
+- Running push and pull with prompts for dry-run and specific folders
+- Managing, restoring, and cleaning your backups
+
+---
+
 ## How it works
 
 - **Multi-folder sync** — syncs `.github`, `.agent`, `.agents`, `.claude` in one go
