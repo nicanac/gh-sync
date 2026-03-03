@@ -47,7 +47,7 @@
 [CmdletBinding()]
 param(
     [Parameter(Position = 0, Mandatory = $true)]
-    [ValidateSet("push", "pull", "diff", "status", "init")]
+    [ValidateSet("push", "pull", "diff", "status", "init", "backups", "restore", "clean")]
     [string]$Action,
 
     [Parameter(Position = 1)]
@@ -56,15 +56,63 @@ param(
     [switch]$DryRun,
 
     [string[]]$Exclude = @(),
+    [string[]]$Only = @(),
 
-    [switch]$Force
+    [switch]$Force,
+    [int]$Keep = 5,
+    [switch]$All,
+    [switch]$Latest
 )
 
 # -- Folders to sync --
 $SYNC_FOLDERS = @(".github", ".agent", ".agents", ".claude")
 
+# -- Helpers --
+function Write-Header { param([string]$msg); Write-Host ("`n=== " + $msg + " ===") -ForegroundColor Cyan }
+function Write-Ok { param([string]$msg); Write-Host ("  [OK] " + $msg) -ForegroundColor Green }
+function Write-Warn { param([string]$msg); Write-Host ("  [!!] " + $msg) -ForegroundColor Yellow }
+function Write-Err { param([string]$msg); Write-Host ("  [ERR] " + $msg) -ForegroundColor Red }
+function Write-Info { param([string]$msg); Write-Host ("  -> " + $msg) -ForegroundColor Gray }
+
+# -- Config Loading --
+$resolvedProject = Resolve-Path $ProjectPath -ErrorAction SilentlyContinue
+$ProjectRoot = if ($resolvedProject) { $resolvedProject.Path } else { $ProjectPath }
+$ProjectGoldenSource = $null
+
+if ($Action -notin @("init", "clean", "backups")) {
+    $configFileJson = Join-Path $ProjectRoot ".gh-sync.json"
+    if (Test-Path $configFileJson) {
+        Write-Info "Loading project config: $configFileJson"
+        try {
+            $cfg = Get-Content $configFileJson -Raw | ConvertFrom-Json
+            if (-not $Exclude -and $cfg.exclude) { $Exclude = $cfg.exclude }
+            if (-not $Only -and $cfg.only) { $Only = $cfg.only }
+            if ($cfg.golden_source) { $ProjectGoldenSource = $cfg.golden_source }
+        } catch {
+            Write-Warn "Failed to parse $configFileJson"
+        }
+    }
+}
+
+if ($Only) {
+    foreach ($f in $Only) {
+        if ($f -notin $SYNC_FOLDERS) {
+            Write-Err "Invalid folder name in --only: '$f'"
+            Write-Err "Valid folders: $($SYNC_FOLDERS -join ', ')"
+            exit 1
+        }
+    }
+}
+
+function Test-ShouldProcessFolder {
+    param([string]$folderName)
+    if (-not $Only) { return $true }
+    return ($folderName -in $Only)
+}
+
 # -- Resolve golden source path --
 function Get-GoldenSource {
+    if ($ProjectGoldenSource) { return $ProjectGoldenSource }
     if ($env:GH_SYNC_SOURCE) { return $env:GH_SYNC_SOURCE }
 
     $configFile = Join-Path $env:USERPROFILE ".gh-sync-config"
@@ -77,13 +125,6 @@ function Get-GoldenSource {
 }
 
 $GoldenSource = Get-GoldenSource
-
-# -- Helpers --
-function Write-Header { param([string]$msg); Write-Host ("`n=== " + $msg + " ===") -ForegroundColor Cyan }
-function Write-Ok { param([string]$msg); Write-Host ("  [OK] " + $msg) -ForegroundColor Green }
-function Write-Warn { param([string]$msg); Write-Host ("  [!!] " + $msg) -ForegroundColor Yellow }
-function Write-Err { param([string]$msg); Write-Host ("  [ERR] " + $msg) -ForegroundColor Red }
-function Write-Info { param([string]$msg); Write-Host ("  -> " + $msg) -ForegroundColor Gray }
 
 function Get-RelPath {
     param([string]$base, [string]$full)
@@ -101,20 +142,33 @@ function Test-ShouldExclude {
 function Get-AllFiles {
     param([string]$folder)
     if (-not (Test-Path $folder)) { return @() }
+    
+    $result = [System.Collections.Generic.List[PSCustomObject]]::new()
+    $md5 = [System.Security.Cryptography.MD5]::Create()
+    
     $files = Get-ChildItem -Path $folder -Recurse -File
-    $result = @()
     foreach ($file in $files) {
         $rel = Get-RelPath -base $folder -full $file.FullName
         if (Test-ShouldExclude $rel) { continue }
-        $hash = (Get-FileHash $file.FullName -Algorithm MD5).Hash
-        $result += [PSCustomObject]@{
+        
+        try {
+            $stream = [System.IO.File]::OpenRead($file.FullName)
+            $hashBytes = $md5.ComputeHash($stream)
+            $stream.Close()
+            $hash = [BitConverter]::ToString($hashBytes).Replace('-', '')
+        } catch {
+            $hash = "ERROR"
+        }
+        
+        $result.Add([PSCustomObject]@{
             RelativePath = $rel
             FullPath     = $file.FullName
             LastWrite    = $file.LastWriteTimeUtc
             Length       = $file.Length
             Hash         = $hash
-        }
+        })
     }
+    $md5.Dispose()
     return $result
 }
 
@@ -292,24 +346,24 @@ if ($Action -eq "init") {
 # ============================================================================
 # VALIDATION
 # ============================================================================
-if (-not $GoldenSource) {
-    Write-Err "Golden source not configured."
-    Write-Err "Run 'gh-sync init' to set it up, or set GH_SYNC_SOURCE env var."
-    exit 1
-}
+if ($Action -notin @("init", "clean", "backups")) {
+    if (-not $GoldenSource -and $Action -ne "restore") {
+        Write-Err "Golden source not configured."
+        Write-Err "Run 'gh-sync init' to set it up, or set GH_SYNC_SOURCE env var."
+        exit 1
+    }
 
-if (-not (Test-Path $GoldenSource)) {
-    Write-Err "Golden source not found: $GoldenSource"
-    Write-Err "Run 'gh-sync init' to reconfigure."
-    exit 1
-}
+    if ($GoldenSource -and -not (Test-Path $GoldenSource) -and $Action -ne "restore") {
+        Write-Err "Golden source not found: $GoldenSource"
+        Write-Err "Run 'gh-sync init' to reconfigure."
+        exit 1
+    }
 
-$resolvedProject = Resolve-Path $ProjectPath -ErrorAction SilentlyContinue
-if (-not $resolvedProject) {
-    Write-Err "Project path does not exist: $ProjectPath"
-    exit 1
+    if (-not $resolvedProject) {
+        Write-Err "Project path does not exist: $ProjectPath"
+        exit 1
+    }
 }
-$ProjectRoot = $resolvedProject.Path
 
 # ============================================================================
 # PUSH
@@ -323,6 +377,7 @@ if ($Action -eq "push") {
     # Collect all diffs first for summary
     $allDiffs = @()
     foreach ($folder in $SYNC_FOLDERS) {
+        if (-not (Test-ShouldProcessFolder $folder)) { continue }
         $src = Join-Path $GoldenSource $folder
         $tgt = Join-Path $ProjectRoot $folder
         if (Test-Path $src) {
@@ -340,6 +395,7 @@ if ($Action -eq "push") {
     }
 
     foreach ($folder in $SYNC_FOLDERS) {
+        if (-not (Test-ShouldProcessFolder $folder)) { continue }
         $folderDiffs = @($allDiffs | Where-Object { $_.Folder -eq $folder })
         if ($folderDiffs.Count -gt 0) {
             $toCopy = @($folderDiffs | Where-Object { $_.Status -ne "ONLY_IN_TARGET" }).Count
@@ -351,6 +407,7 @@ if ($Action -eq "push") {
     if ($DryRun.IsPresent) {
         Write-Host ""
         foreach ($folder in $SYNC_FOLDERS) {
+            if (-not (Test-ShouldProcessFolder $folder)) { continue }
             $src = Join-Path $GoldenSource $folder
             $tgt = Join-Path $ProjectRoot $folder
             if (Test-Path $src) {
@@ -373,6 +430,7 @@ if ($Action -eq "push") {
     Write-Host ""
     $totalCopied = 0
     foreach ($folder in $SYNC_FOLDERS) {
+        if (-not (Test-ShouldProcessFolder $folder)) { continue }
         $src = Join-Path $GoldenSource $folder
         $tgt = Join-Path $ProjectRoot $folder
         $result = Invoke-SyncFolder -sourceDir $src -targetDir $tgt -folderName $folder -isDryRun $false
@@ -393,6 +451,7 @@ elseif ($Action -eq "pull") {
 
     $allDiffs = @()
     foreach ($folder in $SYNC_FOLDERS) {
+        if (-not (Test-ShouldProcessFolder $folder)) { continue }
         $src = Join-Path $ProjectRoot $folder
         $tgt = Join-Path $GoldenSource $folder
         if (Test-Path $src) {
@@ -410,6 +469,7 @@ elseif ($Action -eq "pull") {
     }
 
     foreach ($folder in $SYNC_FOLDERS) {
+        if (-not (Test-ShouldProcessFolder $folder)) { continue }
         $folderDiffs = @($allDiffs | Where-Object { $_.Folder -eq $folder })
         if ($folderDiffs.Count -gt 0) {
             $toCopy = @($folderDiffs | Where-Object { $_.Status -ne "ONLY_IN_TARGET" }).Count
@@ -420,6 +480,7 @@ elseif ($Action -eq "pull") {
     if ($DryRun.IsPresent) {
         Write-Host ""
         foreach ($folder in $SYNC_FOLDERS) {
+            if (-not (Test-ShouldProcessFolder $folder)) { continue }
             $src = Join-Path $ProjectRoot $folder
             $tgt = Join-Path $GoldenSource $folder
             if (Test-Path $src) {
@@ -442,6 +503,7 @@ elseif ($Action -eq "pull") {
     Write-Host ""
     $totalCopied = 0
     foreach ($folder in $SYNC_FOLDERS) {
+        if (-not (Test-ShouldProcessFolder $folder)) { continue }
         $src = Join-Path $ProjectRoot $folder
         $tgt = Join-Path $GoldenSource $folder
         $result = Invoke-SyncFolder -sourceDir $src -targetDir $tgt -folderName $folder -isDryRun $false
@@ -461,6 +523,7 @@ elseif ($Action -eq "diff") {
 
     $totalDiffs = 0
     foreach ($folder in $SYNC_FOLDERS) {
+        if (-not (Test-ShouldProcessFolder $folder)) { continue }
         $src = Join-Path $GoldenSource $folder
         $tgt = Join-Path $ProjectRoot $folder
 
@@ -527,6 +590,7 @@ elseif ($Action -eq "status") {
     $grandModified = 0
 
     foreach ($folder in $SYNC_FOLDERS) {
+        if (-not (Test-ShouldProcessFolder $folder)) { continue }
         $src = Join-Path $GoldenSource $folder
         $tgt = Join-Path $ProjectRoot $folder
 
@@ -575,4 +639,196 @@ elseif ($Action -eq "status") {
     Write-Host "    Only in Golden:  $grandOnlyGolden files" -ForegroundColor Cyan
     Write-Host "    Only in Project: $grandOnlyProject files" -ForegroundColor Magenta
     Write-Host "    Modified:        $grandModified files" -ForegroundColor Yellow
+}
+
+# ============================================================================
+# BACKUPS
+# ============================================================================
+elseif ($Action -eq "backups") {
+    Write-Header "BACKUPS: Available Restore Points"
+    $backupDir = [System.IO.Path]::GetTempPath()
+    $backups = @(Get-ChildItem -Path $backupDir -Directory -Filter "gh-sync-backup-*" | Sort-Object LastWriteTime -Descending)
+    
+    if (-not $backups -or $backups.Count -eq 0) {
+        Write-Info "No backups found in: $backupDir"
+        exit 0
+    }
+    
+    $idx = 0
+    foreach ($b in $backups) {
+        $idx++
+        # Extract folder and timestamp: gh-sync-backup-[FOLDER]-[YYYYMMDD-HHMMSS]
+        if ($b.Name -match "^gh-sync-backup-([^-]+)-(\d{8}-\d{6})$") {
+            $folderPart = $matches[1]
+            $timestampPart = $matches[2]
+            $count = (Get-ChildItem -Path $b.FullName -Recurse -File).Count
+            $sizeInfo = Get-ChildItem -Path $b.FullName -Recurse -File | Measure-Object -Property Length -Sum
+            $size = if ($sizeInfo.Sum) { $sizeInfo.Sum } else { 0 }
+            $sizeStr = if ($size -gt 0) { "{0:N2} MB" -f ($size / 1MB) } else { "0 MB" }
+            
+            Write-Host ("  [$idx] .$folderPart -- $timestampPart ($count files, $sizeStr)") -ForegroundColor Cyan
+            Write-Host ("      $($b.FullName)") -ForegroundColor DarkGray
+        } else {
+            Write-Host ("  [$idx] $($b.Name)") -ForegroundColor Cyan
+            Write-Host ("      $($b.FullName)") -ForegroundColor DarkGray
+        }
+    }
+    
+    Write-Host ""
+    Write-Info "Total: $idx backup(s)"
+    Write-Info "Use 'gh-sync restore --latest' or 'gh-sync restore' to restore."
+    Write-Info "Use 'gh-sync clean --keep N' to remove old backups."
+    exit 0
+}
+
+# ============================================================================
+# RESTORE
+# ============================================================================
+elseif ($Action -eq "restore") {
+    Write-Header "RESTORE: Recover from Backup"
+    $backupDir = [System.IO.Path]::GetTempPath()
+    $backups = @(Get-ChildItem -Path $backupDir -Directory -Filter "gh-sync-backup-*" | Sort-Object LastWriteTime -Descending)
+    
+    if (-not $backups -or $backups.Count -eq 0) {
+        Write-Err "No backups found in: $backupDir"
+        exit 1
+    }
+    
+    $selectedBackup = $null
+    if ($Latest) {
+        $selectedBackup = $backups[0]
+        Write-Info "Using latest backup: $($selectedBackup.Name)"
+    } else {
+        $idx = 0
+        foreach ($b in $backups) {
+            $idx++
+            if ($b.Name -match "^gh-sync-backup-([^-]+)-(\d{8}-\d{6})$") {
+                $folderPart = $matches[1]
+                $timestampPart = $matches[2]
+                $count = (Get-ChildItem -Path $b.FullName -Recurse -File).Count
+                Write-Host ("  [$idx] .$folderPart -- $timestampPart ($count files)") -ForegroundColor Cyan
+            } else {
+                Write-Host ("  [$idx] $($b.Name)") -ForegroundColor Cyan
+            }
+        }
+        
+        Write-Host ""
+        $selection = Read-Host "  Select backup number (1-$($backups.Count))"
+        $selNum = 0
+        if ([int]::TryParse($selection, [ref]$selNum) -and $selNum -ge 1 -and $selNum -le $backups.Count) {
+            $selectedBackup = $backups[$selNum - 1]
+        } else {
+            Write-Err "Invalid selection: $selection"
+            exit 1
+        }
+    }
+    
+    # Determine target folder name from backup name
+    $targetDir = $null
+    if ($selectedBackup.Name -match "^gh-sync-backup-([^-]+)-") {
+        $folderPart = "." + $matches[1]
+        $targetDir = Join-Path $ProjectRoot $folderPart
+    } else {
+        Write-Err "Cannot determine target folder from backup name: $($selectedBackup.Name)"
+        exit 1
+    }
+    
+    $fileCount = (Get-ChildItem -Path $selectedBackup.FullName -Recurse -File).Count
+    Write-Info "Backup:  $($selectedBackup.FullName)"
+    Write-Info "Target:  $targetDir"
+    Write-Info "Files:   $fileCount"
+    
+    if ($DryRun) {
+        Write-Warn "Dry-run mode -- no files were restored."
+        exit 0
+    }
+    
+    if (-not $Force) {
+        Write-Host ""
+        $answer = Read-Host "  Restore will OVERWRITE $targetDir. Proceed? [y/N]"
+        if ($answer -notin @("y", "Y", "yes", "Yes")) {
+            Write-Warn "Aborted."
+            exit 0
+        }
+    }
+    
+    if (Test-Path $targetDir) {
+        Remove-Item -Path $targetDir -Recurse -Force
+    }
+    New-Item -ItemType Directory -Path $targetDir -Force | Out-Null
+    Copy-Item -Path "$($selectedBackup.FullName)\*" -Destination $targetDir -Recurse -Force
+    
+    Write-Host ""
+    Write-Ok "Restored $fileCount files to $targetDir"
+    exit 0
+}
+
+# ============================================================================
+# CLEAN
+# ============================================================================
+elseif ($Action -eq "clean") {
+    Write-Header "CLEAN: Remove Old Backups"
+    $backupDir = [System.IO.Path]::GetTempPath()
+    $backups = @(Get-ChildItem -Path $backupDir -Directory -Filter "gh-sync-backup-*" | Sort-Object LastWriteTime -Descending)
+    
+    if (-not $backups -or $backups.Count -eq 0) {
+        Write-Info "No backups found. Nothing to clean."
+        exit 0
+    }
+    
+    $total = $backups.Count
+    $toRemove = [System.Collections.Generic.List[System.IO.DirectoryInfo]]::new()
+    
+    if ($All) {
+        foreach ($b in $backups) { $toRemove.Add($b) }
+    } else {
+        $folderCounts = @{}
+        foreach ($b in $backups) {
+            if ($b.Name -match "^gh-sync-backup-([^-]+)-") {
+                $folderPart = $matches[1]
+                if (-not $folderCounts.ContainsKey($folderPart)) {
+                    $folderCounts[$folderPart] = 0
+                }
+                $folderCounts[$folderPart]++
+                
+                if ($folderCounts[$folderPart] -gt $Keep) {
+                    $toRemove.Add($b)
+                }
+            }
+        }
+    }
+    
+    if ($toRemove.Count -eq 0) {
+        Write-Ok "Nothing to clean. All $total backup(s) within the keep limit."
+        exit 0
+    }
+    
+    Write-Info "Found $total backup(s), will remove $($toRemove.Count)."
+    
+    if ($DryRun) {
+        foreach ($b in $toRemove) {
+            Write-Host "  Would remove: $($b.Name)" -ForegroundColor Red
+        }
+        Write-Warn "Dry-run mode -- no backups were removed."
+        exit 0
+    }
+    
+    if (-not $Force) {
+        Write-Host ""
+        $answer = Read-Host "  Remove $($toRemove.Count) backup(s)? [y/N]"
+        if ($answer -notin @("y", "Y", "yes", "Yes")) {
+            Write-Warn "Aborted."
+            exit 0
+        }
+    }
+    
+    $removed = 0
+    foreach ($b in $toRemove) {
+        Remove-Item -Path $b.FullName -Recurse -Force
+        $removed++
+    }
+    
+    Write-Host ""
+    Write-Ok "Removed $removed backup(s). $total -> $($total - $removed) remaining."
+    exit 0
 }

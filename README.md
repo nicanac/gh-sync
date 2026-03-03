@@ -19,6 +19,7 @@ Push them all to any project in one command, or pull changes back.
 
 - **Bash 4+** (macOS: install via `brew install bash`)
 - Standard Unix utilities: `find`, `stat`, `md5sum` (or `md5` on macOS), `awk`, `sort`
+- **Optional**: `python` or `jq` (required only for parsing `.gh-sync.json` configs)
 - Works on: Linux, macOS, WSL, Git Bash (Windows)
 
 ---
@@ -52,7 +53,17 @@ gh-sync init
 It will ask you for the path to your golden source **directory** (the parent folder that contains `.github/`, `.agent/`, etc.).
 Example: `~/code/ai-startup`
 
-This saves the path in `~/.gh-sync-config` so it persists.
+This saves the path in `~/.gh-sync-config` so it persists globally.
+
+> **Project-Level Override:** Create a `.gh-sync.json` file in a project's root folder to define project-specific defaults:
+> ```json
+> {
+>   "golden_source": "~/alternative-golden-source",
+>   "exclude": ["*.log", "temp/*"],
+>   "only": [".github", ".agents"]
+> }
+> ```
+> CLI flags always override configuration file settings.
 
 > **Alternative:** Set the environment variable `GH_SYNC_SOURCE` instead.
 
@@ -71,6 +82,9 @@ Open any terminal, `cd` into a project folder, then:
 | `gh-sync diff` | Show file-by-file differences per folder |
 | `gh-sync status` | Quick overview (in-sync, modified, missing — per folder + totals) |
 | `gh-sync init` | (Re)configure the golden source path |
+| `gh-sync backups` | List available restore points |
+| `gh-sync restore` | Restore a specific backup |
+| `gh-sync clean` | Manage and rotate old backups |
 
 ### Options
 
@@ -79,6 +93,10 @@ Open any terminal, `cd` into a project folder, then:
 | `--dry-run` | Preview what would change, without modifying files |
 | `--force` | Skip the "Proceed? [y/N]" confirmation prompt |
 | `--exclude pat1,pat2` | Exclude files matching patterns (comma-separated) |
+| `--only f1,f2` | Sync only specified folders (e.g., `.github,.agents`) |
+| `--keep N` | Retain N backups per folder for `clean` command (default: 5) |
+| `--all` | Process all backups (used with `clean` command) |
+| `--latest` | Use the most recent backup automatically (used with `restore`) |
 | `-h`, `--help` | Show help message |
 | `-v`, `--version` | Show version |
 
@@ -106,9 +124,64 @@ gh-sync pull
 # Exclude files matching patterns
 gh-sync push --exclude "*.log,node_modules/*"
 
-# Check sync status
-gh-sync status
+# Sync ONLY the .github folder (ignore .agent, .agents, .claude)
+gh-sync push --only .github
+
+# Check sync status for specific folders
+gh-sync status --only .github,.agents
+
+# List available backups and restore one
+gh-sync backups
+gh-sync restore 1
+gh-sync restore .github --latest
+
+# Keep only the 5 most recent backups per folder
+gh-sync clean --keep 5
 ```
+
+---
+
+## Interactive Menu (TUI)
+
+If you prefer a menu-driven interface instead of remembering commands and flags, `gh-sync` comes with interactive wrappers!
+
+**Bash / macOS / Linux / WSL:**
+```bash
+./gh-sync-menu.sh
+```
+
+**Windows PowerShell:**
+```powershell
+.\gh-sync-menu.ps1
+```
+
+Both scripts provide a user-friendly menu to execute all commands, including:
+- Checking sync status and viewing diffs
+- Running push and pull with prompts for dry-run and specific folders
+- Managing, restoring, and cleaning your backups
+
+---
+
+## Git Workflow Automation
+
+An intelligent Node.js script is included to automate your git pushes and commits while following Conventional Commits and Git Flow standards.
+
+Usage:
+```bash
+# Interactive mode (Asks for branch name, type, ticket, and description)
+node scripts/git-workflow.js
+
+# Unattended/Automation mode for AI or CI triggers
+node scripts/git-workflow.js --auto
+```
+
+This script will:
+1. Parse your changes intelligently.
+2. Interactively help generate a standard semantic branch name (e.g., `username/feat/PROJ-123-some-change`) and Conventional Commit.
+3. Automatically push changes to the remote.
+4. Optionally trigger `gh pr create` via the GitHub CLI.
+
+For more details on how AI agents can leverage this and the interactive TUI wrappers, see the [AI & Git Workflow Documentation](01-doc/12-AI-GIT-WORKFLOW.md).
 
 ---
 

@@ -9,17 +9,20 @@ set -Eeuo pipefail
 #   .github/   .agent/   .agents/   .claude/
 #
 # Usage:
-#   gh-sync push  [project_path] [--dry-run] [--force] [--exclude pat1,pat2]
-#   gh-sync pull  [project_path] [--dry-run] [--force] [--exclude pat1,pat2]
-#   gh-sync diff  [project_path] [--exclude pat1,pat2]
-#   gh-sync status [project_path] [--exclude pat1,pat2]
+#   gh-sync push  [project_path] [--dry-run] [--force] [--exclude pat1,pat2] [--only .github,.agents]
+#   gh-sync pull  [project_path] [--dry-run] [--force] [--exclude pat1,pat2] [--only .github,.agents]
+#   gh-sync diff  [project_path] [--exclude pat1,pat2] [--only .github,.agents]
+#   gh-sync status [project_path] [--exclude pat1,pat2] [--only .github,.agents]
 #   gh-sync init
+#   gh-sync backups [project_path]
+#   gh-sync restore [project_path] [--latest] [--force]
+#   gh-sync clean [--keep N] [--all] [--force]
 # =============================================================================
 
 # -- Constants ----------------------------------------------------------------
 readonly SYNC_FOLDERS=(".github" ".agent" ".agents" ".claude")
 readonly CONFIG_FILE="${HOME}/.gh-sync-config"
-readonly VERSION="1.0.0"
+readonly VERSION="2.0.0"
 
 # -- Script location ----------------------------------------------------------
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
@@ -72,6 +75,8 @@ PROJECT_PATH=""
 DRY_RUN=false
 FORCE=false
 EXCLUDE_PATTERNS=()
+ONLY_FOLDERS=()
+KEEP_BACKUPS=5
 
 # -- Usage --------------------------------------------------------------------
 usage() {
@@ -82,27 +87,44 @@ Usage:
   gh-sync <action> [project_path] [options]
 
 Actions:
-  push     Copy golden source -> project
-  pull     Copy project -> golden source
-  diff     Show file-by-file differences per folder
-  status   Quick sync overview per folder + totals
-  init     Configure the golden source path
+  push      Copy golden source -> project
+  pull      Copy project -> golden source
+  diff      Show file-by-file differences per folder
+  status    Quick sync overview per folder + totals
+  init      Configure the golden source path
+  backups   List available backups
+  restore   Restore from a backup
+  clean     Remove old backups
 
 Options:
   --dry-run             Preview changes without modifying files
   --force               Skip the "Proceed? [y/N]" confirmation prompt
   --exclude pat1,pat2   Exclude files matching patterns (comma-separated)
+  --only f1,f2          Sync only specific folders (e.g. --only .github,.agents)
+  --keep N              For 'clean': keep last N backups per folder (default: 5)
+  --all                 For 'clean': remove all backups
+  --latest              For 'restore': restore the most recent backup
   -h, --help            Show this help message
   -v, --version         Show version
+
+Per-Project Config:
+  Place a .gh-sync.json in your project root to set defaults:
+  {"exclude": ["*.log"], "only": [".github"], "golden_source": "/path"}
+  CLI flags override config file values.
 
 Examples:
   gh-sync push
   gh-sync push /path/to/project
+  gh-sync push --only .github
+  gh-sync push --only .github,.agents --dry-run
   gh-sync diff
   gh-sync push --dry-run
   gh-sync push --force
   gh-sync pull
   gh-sync status
+  gh-sync backups
+  gh-sync restore --latest
+  gh-sync clean --keep 3
 EOF
     exit "${1:-0}"
 }
@@ -119,7 +141,7 @@ parse_args() {
 
     # Validate action
     case "$ACTION" in
-        push|pull|diff|status|init) ;;
+        push|pull|diff|status|init|backups|restore|clean) ;;
         -h|--help) usage 0 ;;
         -v|--version) echo "gh-sync ${VERSION}"; exit 0 ;;
         *)
@@ -148,6 +170,38 @@ parse_args() {
                 ;;
             --exclude=*)
                 IFS=',' read -ra EXCLUDE_PATTERNS <<< "${1#*=}"
+                shift
+                ;;
+            --only)
+                if [[ $# -lt 2 ]]; then
+                    write_err "--only requires a value"
+                    exit 1
+                fi
+                IFS=',' read -ra ONLY_FOLDERS <<< "$2"
+                shift 2
+                ;;
+            --only=*)
+                IFS=',' read -ra ONLY_FOLDERS <<< "${1#*=}"
+                shift
+                ;;
+            --keep)
+                if [[ $# -lt 2 ]]; then
+                    write_err "--keep requires a number"
+                    exit 1
+                fi
+                KEEP_BACKUPS="$2"
+                shift 2
+                ;;
+            --keep=*)
+                KEEP_BACKUPS="${1#*=}"
+                shift
+                ;;
+            --all)
+                KEEP_BACKUPS=0
+                shift
+                ;;
+            --latest)
+                LATEST=true
                 shift
                 ;;
             -h|--help)
@@ -225,6 +279,154 @@ should_exclude() {
     done
     return 1
 }
+
+# Check if a folder name should be processed (--only filter)
+should_process_folder() {
+    local folder="$1"
+    # If --only is not set, process all folders
+    if [[ ${#ONLY_FOLDERS[@]} -eq 0 ]]; then
+        return 0
+    fi
+    local f
+    for f in "${ONLY_FOLDERS[@]}"; do
+        if [[ "$f" == "$folder" ]]; then
+            return 0
+        fi
+    done
+    return 1
+}
+
+# Validate --only folder names against SYNC_FOLDERS
+validate_only_folders() {
+    if [[ ${#ONLY_FOLDERS[@]} -eq 0 ]]; then
+        return 0
+    fi
+    local f valid
+    for f in "${ONLY_FOLDERS[@]}"; do
+        valid=false
+        local sf
+        for sf in "${SYNC_FOLDERS[@]}"; do
+            if [[ "$f" == "$sf" ]]; then
+                valid=true
+                break
+            fi
+        done
+        if [[ "$valid" == "false" ]]; then
+            write_err "Invalid folder name in --only: '$f'"
+            write_err "Valid folders: ${SYNC_FOLDERS[*]}"
+            exit 1
+        fi
+    done
+}
+
+# -- Per-project config loading -----------------------------------------------
+load_project_config() {
+    local project_path="$1"
+    local config_file="${project_path}/.gh-sync.json"
+
+    [[ -f "$config_file" ]] || return 0
+
+    write_info "Loading project config: ${config_file}"
+
+    # We need python or jq to parse JSON. Try python first (more common), then jq
+    local json_content
+    json_content="$(cat "$config_file")"
+
+    # Parse exclude (only if not already set via CLI)
+    if [[ ${#EXCLUDE_PATTERNS[@]} -eq 0 ]]; then
+        local excludes
+        if command -v python3 &>/dev/null; then
+            excludes="$(python3 -c "
+import json, sys
+try:
+    d = json.loads(sys.stdin.read())
+    for e in d.get('exclude', []):
+        print(e)
+except: pass
+" <<< "$json_content" 2>/dev/null)" || true
+        elif command -v python &>/dev/null; then
+            excludes="$(python -c "
+import json, sys
+try:
+    d = json.loads(sys.stdin.read())
+    for e in d.get('exclude', []):
+        print(e)
+except: pass
+" <<< "$json_content" 2>/dev/null)" || true
+        elif command -v jq &>/dev/null; then
+            excludes="$(jq -r '.exclude[]? // empty' <<< "$json_content" 2>/dev/null)" || true
+        fi
+        if [[ -n "$excludes" ]]; then
+            while IFS= read -r pattern; do
+                [[ -n "$pattern" ]] && EXCLUDE_PATTERNS+=("$pattern")
+            done <<< "$excludes"
+        fi
+    fi
+
+    # Parse only (only if not already set via CLI)
+    if [[ ${#ONLY_FOLDERS[@]} -eq 0 ]]; then
+        local only_list
+        if command -v python3 &>/dev/null; then
+            only_list="$(python3 -c "
+import json, sys
+try:
+    d = json.loads(sys.stdin.read())
+    for e in d.get('only', []):
+        print(e)
+except: pass
+" <<< "$json_content" 2>/dev/null)" || true
+        elif command -v python &>/dev/null; then
+            only_list="$(python -c "
+import json, sys
+try:
+    d = json.loads(sys.stdin.read())
+    for e in d.get('only', []):
+        print(e)
+except: pass
+" <<< "$json_content" 2>/dev/null)" || true
+        elif command -v jq &>/dev/null; then
+            only_list="$(jq -r '.only[]? // empty' <<< "$json_content" 2>/dev/null)" || true
+        fi
+        if [[ -n "$only_list" ]]; then
+            while IFS= read -r f; do
+                [[ -n "$f" ]] && ONLY_FOLDERS+=("$f")
+            done <<< "$only_list"
+        fi
+    fi
+
+    # Parse golden_source override (only if not set via env or CLI config)
+    if [[ -z "${GH_SYNC_SOURCE:-}" ]]; then
+        local gs_override
+        if command -v python3 &>/dev/null; then
+            gs_override="$(python3 -c "
+import json, sys
+try:
+    d = json.loads(sys.stdin.read())
+    v = d.get('golden_source', '')
+    if v: print(v)
+except: pass
+" <<< "$json_content" 2>/dev/null)" || true
+        elif command -v python &>/dev/null; then
+            gs_override="$(python -c "
+import json, sys
+try:
+    d = json.loads(sys.stdin.read())
+    v = d.get('golden_source', '')
+    if v: print(v)
+except: pass
+" <<< "$json_content" 2>/dev/null)" || true
+        elif command -v jq &>/dev/null; then
+            gs_override="$(jq -r '.golden_source // empty' <<< "$json_content" 2>/dev/null)" || true
+        fi
+        if [[ -n "$gs_override" ]]; then
+            PROJECT_GOLDEN_SOURCE="$gs_override"
+        fi
+    fi
+}
+
+# Variable to store per-project golden source override
+PROJECT_GOLDEN_SOURCE=""
+LATEST=false
 
 # Detect hash command once at startup (avoid per-file detection)
 if command -v md5sum &>/dev/null; then
@@ -596,6 +798,7 @@ do_push() {
     local total_changes=0
     local folder
     for folder in "${SYNC_FOLDERS[@]}"; do
+        should_process_folder "$folder" || continue
         local src="${golden_source}/${folder}"
         local tgt="${project_root}/${folder}"
 
@@ -622,6 +825,7 @@ do_push() {
     if [[ "$DRY_RUN" == "true" ]]; then
         printf '\n'
         for folder in "${SYNC_FOLDERS[@]}"; do
+            should_process_folder "$folder" || continue
             local src="${golden_source}/${folder}"
             local tgt="${project_root}/${folder}"
             if [[ -d "$src" ]]; then
@@ -648,6 +852,7 @@ do_push() {
     printf '\n'
     local total_copied=0
     for folder in "${SYNC_FOLDERS[@]}"; do
+        should_process_folder "$folder" || continue
         local src="${golden_source}/${folder}"
         local tgt="${project_root}/${folder}"
         local result
@@ -679,6 +884,7 @@ do_pull() {
     local total_changes=0
     local folder
     for folder in "${SYNC_FOLDERS[@]}"; do
+        should_process_folder "$folder" || continue
         local src="${project_root}/${folder}"
         local tgt="${golden_source}/${folder}"
 
@@ -704,6 +910,7 @@ do_pull() {
     if [[ "$DRY_RUN" == "true" ]]; then
         printf '\n'
         for folder in "${SYNC_FOLDERS[@]}"; do
+            should_process_folder "$folder" || continue
             local src="${project_root}/${folder}"
             local tgt="${golden_source}/${folder}"
             if [[ -d "$src" ]]; then
@@ -730,6 +937,7 @@ do_pull() {
     printf '\n'
     local total_copied=0
     for folder in "${SYNC_FOLDERS[@]}"; do
+        should_process_folder "$folder" || continue
         local src="${project_root}/${folder}"
         local tgt="${golden_source}/${folder}"
         local result
@@ -757,6 +965,7 @@ do_diff() {
     local total_diffs=0
     local folder
     for folder in "${SYNC_FOLDERS[@]}"; do
+        should_process_folder "$folder" || continue
         local src="${golden_source}/${folder}"
         local tgt="${project_root}/${folder}"
 
@@ -834,6 +1043,7 @@ do_status() {
 
     local folder
     for folder in "${SYNC_FOLDERS[@]}"; do
+        should_process_folder "$folder" || continue
         local src="${golden_source}/${folder}"
         local tgt="${project_root}/${folder}"
 
@@ -900,6 +1110,222 @@ do_status() {
 }
 
 # =============================================================================
+# BACKUPS — List available backups
+# =============================================================================
+do_backups() {
+    write_header "BACKUPS: Available Restore Points"
+
+    local backup_dir="${TMPDIR:-/tmp}"
+    local backups
+    backups="$(find "$backup_dir" -maxdepth 1 -type d -name 'gh-sync-backup-*' 2>/dev/null | sort -r)"
+
+    if [[ -z "$backups" ]]; then
+        write_info "No backups found in: ${backup_dir}"
+        return 0
+    fi
+
+    local idx=0
+    while IFS= read -r bdir; do
+        [[ -n "$bdir" ]] || continue
+        local bname
+        bname="$(basename "$bdir")"
+
+        # Parse folder name and timestamp from: gh-sync-backup-FOLDER-YYYYMMDD-HHMMSS.XXXXXX
+        local folder_part timestamp_part
+        folder_part="$(echo "$bname" | sed 's/^gh-sync-backup-//;s/-[0-9]\{8\}-[0-9]\{6\}.*$//')"
+        timestamp_part="$(echo "$bname" | grep -oP '\d{8}-\d{6}' || echo 'unknown')"
+
+        local file_count
+        file_count="$(find "$bdir" -type f 2>/dev/null | wc -l | tr -d '[:space:]')"
+
+        local size
+        if command -v du &>/dev/null; then
+            size="$(du -sh "$bdir" 2>/dev/null | awk '{print $1}')" || size="?"
+        else
+            size="?"
+        fi
+
+        idx=$((idx + 1))
+        write_colored "$_color_cyan" "[${idx}] .${folder_part} — ${timestamp_part} (${file_count} files, ${size})"
+        write_colored "$_color_gray" "    ${bdir}"
+    done <<< "$backups"
+
+    printf '\n'
+    write_info "Total: ${idx} backup(s)"
+    write_info "Use 'gh-sync restore --latest' or 'gh-sync restore' to restore."
+    write_info "Use 'gh-sync clean --keep N' to remove old backups."
+}
+
+# =============================================================================
+# RESTORE — Restore from a backup
+# =============================================================================
+do_restore() {
+    local project_root="$1"
+
+    write_header "RESTORE: Recover from Backup"
+
+    local backup_dir="${TMPDIR:-/tmp}"
+    local backups
+    backups="$(find "$backup_dir" -maxdepth 1 -type d -name 'gh-sync-backup-*' 2>/dev/null | sort -r)"
+
+    if [[ -z "$backups" ]]; then
+        write_err "No backups found in: ${backup_dir}"
+        exit 1
+    fi
+
+    # Build indexed array of backups
+    local -a backup_list=()
+    while IFS= read -r bdir; do
+        [[ -n "$bdir" ]] && backup_list+=("$bdir")
+    done <<< "$backups"
+
+    local selected_backup
+
+    if [[ "$LATEST" == "true" ]]; then
+        selected_backup="${backup_list[0]}"
+        write_info "Using latest backup: $(basename "$selected_backup")"
+    else
+        # Show list and prompt
+        local idx=0
+        for bdir in "${backup_list[@]}"; do
+            local bname folder_part timestamp_part file_count
+            bname="$(basename "$bdir")"
+            folder_part="$(echo "$bname" | sed 's/^gh-sync-backup-//;s/-[0-9]\{8\}-[0-9]\{6\}.*$//')"
+            timestamp_part="$(echo "$bname" | grep -oP '\d{8}-\d{6}' || echo 'unknown')"
+            file_count="$(find "$bdir" -type f 2>/dev/null | wc -l | tr -d '[:space:]')"
+            idx=$((idx + 1))
+            write_colored "$_color_cyan" "[${idx}] .${folder_part} — ${timestamp_part} (${file_count} files)"
+        done
+
+        printf '\n  Select backup number (1-%d): ' "${#backup_list[@]}"
+        read -r selection
+
+        if ! [[ "$selection" =~ ^[0-9]+$ ]] || [[ "$selection" -lt 1 ]] || [[ "$selection" -gt "${#backup_list[@]}" ]]; then
+            write_err "Invalid selection: $selection"
+            exit 1
+        fi
+
+        selected_backup="${backup_list[$((selection - 1))]}"
+    fi
+
+    # Determine target folder from backup name
+    local bname folder_part target_dir
+    bname="$(basename "$selected_backup")"
+    folder_part="$(echo "$bname" | sed 's/^gh-sync-backup-//;s/-[0-9]\{8\}-[0-9]\{6\}.*$//')"
+    target_dir="${project_root}/.${folder_part}"
+
+    write_info "Backup:  ${selected_backup}"
+    write_info "Target:  ${target_dir}"
+
+    local file_count
+    file_count="$(find "$selected_backup" -type f 2>/dev/null | wc -l | tr -d '[:space:]')"
+    write_info "Files:   ${file_count}"
+
+    if [[ "$DRY_RUN" == "true" ]]; then
+        write_warn "Dry-run mode — no files were restored."
+        return 0
+    fi
+
+    if [[ "$FORCE" != "true" ]]; then
+        printf '\n  Restore will OVERWRITE %s. Proceed? [y/N] ' "$target_dir"
+        read -r answer
+        case "$answer" in
+            y|Y|yes|Yes) ;;
+            *) write_warn "Aborted."; exit 0 ;;
+        esac
+    fi
+
+    # Perform restore
+    if [[ -d "$target_dir" ]]; then
+        rm -rf "$target_dir"
+    fi
+    mkdir -p "$target_dir"
+    cp -a "$selected_backup/." "$target_dir/" 2>/dev/null || true
+
+    printf '\n'
+    write_ok "Restored ${file_count} files to ${target_dir}"
+}
+
+# =============================================================================
+# CLEAN — Remove old backups
+# =============================================================================
+do_clean() {
+    write_header "CLEAN: Remove Old Backups"
+
+    local backup_dir="${TMPDIR:-/tmp}"
+    local backups
+    backups="$(find "$backup_dir" -maxdepth 1 -type d -name 'gh-sync-backup-*' 2>/dev/null | sort -r)"
+
+    if [[ -z "$backups" ]]; then
+        write_info "No backups found. Nothing to clean."
+        return 0
+    fi
+
+    # Build indexed array
+    local -a backup_list=()
+    while IFS= read -r bdir; do
+        [[ -n "$bdir" ]] && backup_list+=("$bdir")
+    done <<< "$backups"
+
+    local total="${#backup_list[@]}"
+    local to_remove=0
+    local -a remove_list=()
+
+    if [[ "$KEEP_BACKUPS" -eq 0 ]]; then
+        # --all: remove everything
+        remove_list=("${backup_list[@]}")
+        to_remove="$total"
+    else
+        # Group backups by folder name, keep N most recent per folder
+        # First, get unique folder names
+        local -A folder_counts
+        for bdir in "${backup_list[@]}"; do
+            local bname folder_part
+            bname="$(basename "$bdir")"
+            folder_part="$(echo "$bname" | sed 's/^gh-sync-backup-//;s/-[0-9]\{8\}-[0-9]\{6\}.*$//')"
+            folder_counts["$folder_part"]=$(( ${folder_counts[$folder_part]:-0} + 1 ))
+
+            if [[ ${folder_counts[$folder_part]} -gt $KEEP_BACKUPS ]]; then
+                remove_list+=("$bdir")
+                to_remove=$((to_remove + 1))
+            fi
+        done
+    fi
+
+    if [[ "$to_remove" -eq 0 ]]; then
+        write_ok "Nothing to clean. All ${total} backup(s) within the keep limit."
+        return 0
+    fi
+
+    write_info "Found ${total} backup(s), will remove ${to_remove}."
+
+    if [[ "$DRY_RUN" == "true" ]]; then
+        for bdir in "${remove_list[@]}"; do
+            write_colored "$_color_red" "  Would remove: $(basename "$bdir")"
+        done
+        write_warn "Dry-run mode — no backups were removed."
+        return 0
+    fi
+
+    if [[ "$FORCE" != "true" ]]; then
+        printf '\n  Remove %d backup(s)? [y/N] ' "$to_remove"
+        read -r answer
+        case "$answer" in
+            y|Y|yes|Yes) ;;
+            *) write_warn "Aborted."; exit 0 ;;
+        esac
+    fi
+
+    local removed=0
+    for bdir in "${remove_list[@]}"; do
+        rm -rf -- "$bdir" && removed=$((removed + 1))
+    done
+
+    printf '\n'
+    write_ok "Removed ${removed} backup(s). ${total} -> $((total - removed)) remaining."
+}
+
+# =============================================================================
 # MAIN
 # =============================================================================
 main() {
@@ -911,9 +1337,48 @@ main() {
         exit 0
     fi
 
-    # Resolve golden source (already normalized by get_golden_source)
+    # Handle clean separately (doesn't require project path or golden source)
+    if [[ "$ACTION" == "clean" ]]; then
+        do_clean
+        exit 0
+    fi
+
+    # Handle backups (doesn't require golden source)
+    if [[ "$ACTION" == "backups" ]]; then
+        do_backups
+        exit 0
+    fi
+
+    # Resolve project path (normalize Windows backslashes)
+    PROJECT_PATH="$(normalize_path "$PROJECT_PATH")"
+    if [[ ! -d "$PROJECT_PATH" ]]; then
+        write_err "Project path does not exist: ${PROJECT_PATH}"
+        exit 1
+    fi
+
+    local project_root
+    project_root="$(cd "$PROJECT_PATH" && pwd -P)"
+
+    # Load per-project config (.gh-sync.json) — CLI flags override
+    load_project_config "$project_root"
+
+    # Validate --only folder names
+    validate_only_folders
+
+    # Handle restore (needs project path but not golden source)
+    if [[ "$ACTION" == "restore" ]]; then
+        do_restore "$project_root"
+        exit 0
+    fi
+
+    # Resolve golden source: per-project override > env > config file
     local golden_source
-    golden_source="$(get_golden_source)"
+    if [[ -n "$PROJECT_GOLDEN_SOURCE" ]]; then
+        golden_source="$(normalize_path "$PROJECT_GOLDEN_SOURCE")"
+        write_info "Using per-project golden source: ${golden_source}"
+    else
+        golden_source="$(get_golden_source)"
+    fi
 
     if [[ -z "$golden_source" ]]; then
         write_err "Golden source not configured."
@@ -927,15 +1392,13 @@ main() {
         exit 1
     fi
 
-    # Resolve project path (normalize Windows backslashes)
-    PROJECT_PATH="$(normalize_path "$PROJECT_PATH")"
-    if [[ ! -d "$PROJECT_PATH" ]]; then
-        write_err "Project path does not exist: ${PROJECT_PATH}"
-        exit 1
+    # Show active filters
+    if [[ ${#ONLY_FOLDERS[@]} -gt 0 ]]; then
+        write_info "Syncing only: ${ONLY_FOLDERS[*]}"
     fi
-
-    local project_root
-    project_root="$(cd "$PROJECT_PATH" && pwd -P)"
+    if [[ ${#EXCLUDE_PATTERNS[@]} -gt 0 ]]; then
+        write_info "Excluding: ${EXCLUDE_PATTERNS[*]}"
+    fi
 
     # Dispatch
     case "$ACTION" in
