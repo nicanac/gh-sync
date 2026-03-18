@@ -47,7 +47,7 @@
 [CmdletBinding()]
 param(
     [Parameter(Position = 0, Mandatory = $true)]
-    [ValidateSet("push", "pull", "diff", "status", "init", "backups", "restore", "clean")]
+    [ValidateSet("push", "pull", "diff", "status", "init", "config", "backups", "restore", "clean")]
     [string]$Action,
 
     [Parameter(Position = 1)]
@@ -65,7 +65,8 @@ param(
 )
 
 # -- Folders to sync --
-$SYNC_FOLDERS = @(".github", ".agent", ".agents", ".claude")
+$SYNC_FOLDERS = @(".github", ".agent", ".agents", ".claude", ".cursor")
+$VERSION = "2.1.0"
 
 # -- Helpers --
 function Write-Header { param([string]$msg); Write-Host ("`n=== " + $msg + " ===") -ForegroundColor Cyan }
@@ -186,28 +187,29 @@ function Compare-Folders {
 
     $allKeys = @($sourceMap.Keys) + @($targetMap.Keys) | Sort-Object -Unique
 
-    $results = @()
+    # Use List<T> for O(1) append instead of O(n²) array concatenation
+    $results = [System.Collections.Generic.List[PSCustomObject]]::new()
     foreach ($key in $allKeys) {
         $inSource = $sourceMap.ContainsKey($key)
         $inTarget = $targetMap.ContainsKey($key)
 
         if ($inSource -and (-not $inTarget)) {
-            $results += [PSCustomObject]@{
+            $results.Add([PSCustomObject]@{
                 RelativePath = $key
                 Status       = "ONLY_IN_SOURCE"
                 Detail       = "Only in $sourceLabel"
                 SourceFile   = $sourceMap[$key]
                 TargetFile   = $null
-            }
+            })
         }
         elseif ((-not $inSource) -and $inTarget) {
-            $results += [PSCustomObject]@{
+            $results.Add([PSCustomObject]@{
                 RelativePath = $key
                 Status       = "ONLY_IN_TARGET"
                 Detail       = "Only in $targetLabel"
                 SourceFile   = $null
                 TargetFile   = $targetMap[$key]
-            }
+            })
         }
         else {
             $s = $sourceMap[$key]
@@ -215,13 +217,13 @@ function Compare-Folders {
             if ($s.Hash -ne $t.Hash) {
                 $newer = $sourceLabel
                 if ($t.LastWrite -gt $s.LastWrite) { $newer = $targetLabel }
-                $results += [PSCustomObject]@{
+                $results.Add([PSCustomObject]@{
                     RelativePath = $key
                     Status       = "MODIFIED"
                     Detail       = "Different (newer in $newer)"
                     SourceFile   = $s
                     TargetFile   = $t
-                }
+                })
             }
         }
     }
@@ -288,6 +290,66 @@ function Invoke-SyncFolder {
     }
     Write-Ok "$folderName -- $copiedCount file(s) synced"
     return @{ Copied = $copiedCount; Skipped = $false }
+}
+
+# ============================================================================
+# CONFIG — Show effective settings or generate a .gh-sync.json template
+# ============================================================================
+if ($Action -eq "config") {
+    Write-Header "CONFIG: Effective Settings"
+
+    # Determine golden source and its origin
+    $gsSource = "(not configured)"
+    $gsValue  = "-"
+
+    if ($env:GH_SYNC_SOURCE) {
+        $gsSource = "GH_SYNC_SOURCE env var"
+        $gsValue  = $env:GH_SYNC_SOURCE
+    } elseif ($ProjectGoldenSource) {
+        $gsSource = ".gh-sync.json (golden_source)"
+        $gsValue  = $ProjectGoldenSource
+    } else {
+        $configFilePath = Join-Path $env:USERPROFILE ".gh-sync-config"
+        if (Test-Path $configFilePath) {
+            $cfgVal = (Get-Content $configFilePath -First 1).Trim()
+            if ($cfgVal) { $gsSource = $configFilePath; $gsValue = $cfgVal }
+        }
+    }
+
+    Write-Host ""
+    Write-Host "  Golden source" -ForegroundColor White
+    Write-Info "  Value:  $gsValue"
+    Write-Info "  Source: $gsSource"
+
+    Write-Host ""
+    Write-Host "  Sync folders" -ForegroundColor White
+    Write-Info "  $($SYNC_FOLDERS -join ', ')"
+
+    Write-Host ""
+    Write-Host "  Active filters" -ForegroundColor White
+    if ($Only) {
+        Write-Info "  --only:    $($Only -join ', ')"
+    } else {
+        Write-Info "  --only:    (all folders)"
+    }
+    if ($Exclude) {
+        Write-Info "  --exclude: $($Exclude -join ', ')"
+    } else {
+        Write-Info "  --exclude: (none)"
+    }
+
+    Write-Host ""
+    Write-Host "  Project config file" -ForegroundColor White
+    $pconf = Join-Path $ProjectRoot ".gh-sync.json"
+    if (Test-Path $pconf) {
+        Write-Info "  $pconf (loaded)"
+    } else {
+        Write-Info "  $pconf (not found)"
+    }
+
+    Write-Host ""
+    Write-Info "Run 'gh-sync config -ProjectPath . ' with a .gh-sync.json to customise per-project settings."
+    exit 0
 }
 
 # ============================================================================

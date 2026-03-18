@@ -1,7 +1,8 @@
 # 11 — Improvement Plan
 
-> **Created:** 2026-03-03  
-> **Status:** Proposed  
+> **Created:** 2026-03-03
+> **Updated:** 2026-03-18
+> **Status:** Active
 > **Total Items:** 5 priorities, 25 sub-tasks
 
 ---
@@ -33,12 +34,12 @@
 
 ### Sub-Tasks
 
-- [ ] **1.1 — Set up test framework (Bash)**
-  - Choose testing framework: [BATS (Bash Automated Testing System)](https://github.com/bats-core/bats-core)
-  - Create `tests/` directory structure
-  - Create `tests/test_helper.bash` with fixtures (temp golden source, temp project)
-  - Add teardown helpers that clean up temp directories
-  - Create a `run-tests.sh` script
+- [x] **1.1 — Set up test framework (Bash)**
+  - Framework: [BATS (Bash Automated Testing System)](https://github.com/bats-core/bats-core)
+  - Created `tests/` directory with 4 test files
+  - Created `tests/test_helper.bash` with fixtures and helpers
+  - Teardown helpers clean temp directories
+  - Created `run-tests.sh` runner script
 
 - [ ] **1.2 — Set up test framework (PowerShell)**
   - Use [Pester](https://pester.dev/) (standard PowerShell testing framework)
@@ -46,29 +47,24 @@
   - Create test fixtures (temp golden + project dirs)
   - Add `Invoke-Pester` as entry point
 
-- [ ] **1.3 — Write core logic tests**
-  - Test `push`: new files copied, modified files overwritten, target-only files preserved
-  - Test `pull`: reverse direction of push
-  - Test `diff`: correct symbols `[+]`, `[-]`, `[~]` for each case
-  - Test `status`: correct counts (in-sync, only-golden, only-project, modified)
-  - Test `init`: config file created correctly
+- [x] **1.3 — Write core logic tests**
+  - `tests/01-push-pull.bats` — push (new files, modified, preserved, dry-run, --only, --exclude) and pull
+  - `tests/02-diff-status.bats` — diff symbols [+]/[-]/[~] and status counts
+  - `tests/04-backup-restore.bats` — backup creation, restore --latest, clean --all
 
-- [ ] **1.4 — Write edge case tests**
-  - Filenames with spaces, special characters, unicode
-  - Empty directories (golden empty, project empty, both empty)
-  - Binary files (images, PDFs)
-  - Deeply nested folder structures
-  - Windows backslash paths (MINGW64 compatibility)
-  - Missing hash command (graceful exit)
-  - `--dry-run` must NOT modify any files (assert no writes)
-  - `--exclude` patterns work correctly
+- [x] **1.4 — Write edge case tests**
+  - `tests/03-edge-cases.bats` — spaces/unicode/parentheses in filenames, binary files, deeply nested dirs
+  - Empty directory handling, idempotency, missing golden source, unknown actions
+  - `--dry-run` must NOT modify files (asserted via file counts)
+  - `--exclude` patterns respected, `.gh-sync.json` config file, CLI override precedence
 
-- [ ] **1.5 — Set up CI/CD pipeline**
-  - Create `.github/workflows/test.yml`
-  - Run Bash tests on `ubuntu-latest` and `macos-latest`
-  - Run PowerShell tests on `windows-latest`
-  - Trigger on push and pull requests
-  - Badge in README
+- [x] **1.5 — Set up CI/CD pipeline**
+  - Created `.github/workflows/test.yml`
+  - Bash tests on `ubuntu-latest` and `macos-latest`
+  - PowerShell skeleton on `windows-latest` (Pester)
+  - ShellCheck linting on all `.sh` files
+  - Triggers on push and pull requests
+  - Badge added to README
 
 ---
 
@@ -253,10 +249,10 @@ CLI flags should **override** file config (not merge).
   - Or `ConvertFrom-Yaml` if using YAML (requires module)
   - JSON is the safer choice for zero-dependency support
 
-- [ ] **4.4 — Add `gh-sync config` command**
-  - `gh-sync config` — show effective config (merged CLI + file + global)
-  - `gh-sync config init` — generate a `.gh-sync.yaml` template in current project
-  - Useful for debugging config precedence
+- [x] **4.4 — Add `gh-sync config` command**
+  - `gh-sync config` — show effective config (golden source, sync folders, active filters, project config file)
+  - `gh-sync config init` — generate a `.gh-sync.json` template in current project
+  - Implemented in both Bash and PowerShell
 
 - [ ] **4.5 — Write tests and documentation**
   - Test config file loading + CLI override precedence
@@ -308,10 +304,10 @@ Additionally, replace array concatenation (`$result += ...`) with `[System.Colle
   - Benchmark: measure time on 100-file and 500-file directories
 
 - [x] **5.2 — Replace array concatenation with `List<T>`**
-  - In `Get-AllFiles`: replace `$result += [PSCustomObject]@{...}` with `$list.Add(...)`
-  - In `Compare-Folders`: replace `$results += ...` with `$list.Add(...)`
+  - `Get-AllFiles`: uses `[System.Collections.Generic.List[PSCustomObject]]::new()` + `.Add()`
+  - `Compare-Folders`: fixed from `$results += [PSCustomObject]@{...}` → `$results.Add(...)`
   - PowerShell array `+=` copies the entire array on each append → O(n²)
-  - `[System.Collections.Generic.List[object]]` is O(1) amortized
+  - `[System.Collections.Generic.List[PSCustomObject]]` is O(1) amortized
 
 - [ ] **5.3 — Add parallel hashing option**
   - PowerShell 7+ supports `ForEach-Object -Parallel`
@@ -359,9 +355,9 @@ graph TD
 
 | Task | Sub-tasks | Done | Status |
 |------|-----------|------|--------|
-| 1. Test Suite | 5 | 0/5 | ⬜ Not started |
-| 2. Selective Folder Sync | 5 | 4/5 | 🟨 In progress |
+| 1. Test Suite | 5 | 4/5 | 🟨 In progress (Pester remaining) |
+| 2. Selective Folder Sync | 5 | 4/5 | 🟨 In progress (tests remaining) |
 | 3. Restore & Backups | 5 | 5/5 | ✅ Done |
-| 4. Per-Project Config | 5 | 3/5 | 🟨 In progress |
+| 4. Per-Project Config | 5 | 4/5 | 🟨 In progress (tests remaining) |
 | 5. PS Performance | 5 | 2/5 | 🟨 In progress |
-| **Total** | **25** | **14/25** | |
+| **Total** | **25** | **19/25** | |

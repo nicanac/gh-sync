@@ -1,8 +1,10 @@
 # gh-sync — AI Config Folders Sync Tool
 
+![Tests](https://github.com/nicanac/gh-sync/actions/workflows/test.yml/badge.svg)
+
 Synchronize shared AI configuration folders across all your projects.
 
-One **golden source** directory is the single source of truth. It contains up to four folders:
+One **golden source** directory is the single source of truth. It contains up to five folders:
 
 | Folder | Purpose |
 |--------|---------|
@@ -10,6 +12,7 @@ One **golden source** directory is the single source of truth. It contains up to
 | `.agent/` | VS Code agent rules, skills, workflows |
 | `.agents/` | Additional agent skills |
 | `.claude/` | Claude Code skills |
+| `.cursor/` | Cursor IDE rules and AI configuration |
 
 Push them all to any project in one command, or pull changes back.
 
@@ -82,6 +85,8 @@ Open any terminal, `cd` into a project folder, then:
 | `gh-sync diff` | Show file-by-file differences per folder |
 | `gh-sync status` | Quick overview (in-sync, modified, missing — per folder + totals) |
 | `gh-sync init` | (Re)configure the golden source path |
+| `gh-sync config` | Show effective config (golden source, filters, project config) |
+| `gh-sync config init` | Generate a `.gh-sync.json` template in the current project |
 | `gh-sync backups` | List available restore points |
 | `gh-sync restore` | Restore a specific backup |
 | `gh-sync clean` | Manage and rotate old backups |
@@ -187,7 +192,7 @@ For more details on how AI agents can leverage this and the interactive TUI wrap
 
 ## How it works
 
-- **Multi-folder sync** — syncs `.github`, `.agent`, `.agents`, `.claude` in one go
+- **Multi-folder sync** — syncs `.github`, `.agent`, `.agents`, `.claude`, `.cursor` in one go
 - **Hash comparison** — only files that actually changed are copied (md5sum / md5 / shasum)
 - **Backup before sync** — a timestamped backup per folder is saved in `$TMPDIR/gh-sync-backup-*`
 - **Non-destructive** — files that exist only in the target are flagged but never deleted
@@ -205,6 +210,30 @@ For more details on how AI agents can leverage this and the interactive TUI wrap
 | `[+]` | File only in golden source (will be copied on push) |
 | `[-]` | File only in project (won't be deleted) |
 | `[~]` | File modified (shows which side is newer) |
+
+---
+
+## Running Tests
+
+gh-sync ships with a BATS test suite covering push, pull, diff, status, backups, and edge cases.
+
+**Requirements:** Install [BATS](https://github.com/bats-core/bats-core):
+```bash
+sudo apt install bats        # Debian/Ubuntu
+brew install bats-core       # macOS
+```
+
+**Run all tests:**
+```bash
+./run-tests.sh
+```
+
+**Run specific file:**
+```bash
+./run-tests.sh tests/01-push-pull.bats
+```
+
+**CI:** Tests run automatically on every push via GitHub Actions (Ubuntu + macOS).
 
 ---
 

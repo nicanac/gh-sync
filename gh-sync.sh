@@ -20,9 +20,9 @@ set -Eeuo pipefail
 # =============================================================================
 
 # -- Constants ----------------------------------------------------------------
-readonly SYNC_FOLDERS=(".github" ".agent" ".agents" ".claude")
+readonly SYNC_FOLDERS=(".github" ".agent" ".agents" ".claude" ".cursor")
 readonly CONFIG_FILE="${HOME}/.gh-sync-config"
-readonly VERSION="2.0.0"
+readonly VERSION="2.1.0"
 
 # -- Script location ----------------------------------------------------------
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
@@ -92,6 +92,7 @@ Actions:
   diff      Show file-by-file differences per folder
   status    Quick sync overview per folder + totals
   init      Configure the golden source path
+  config    Show effective config (or generate a .gh-sync.json template)
   backups   List available backups
   restore   Restore from a backup
   clean     Remove old backups
@@ -122,6 +123,8 @@ Examples:
   gh-sync push --force
   gh-sync pull
   gh-sync status
+  gh-sync config
+  gh-sync config init
   gh-sync backups
   gh-sync restore --latest
   gh-sync clean --keep 3
@@ -141,7 +144,7 @@ parse_args() {
 
     # Validate action
     case "$ACTION" in
-        push|pull|diff|status|init|backups|restore|clean) ;;
+        push|pull|diff|status|init|backups|restore|clean|config) ;;
         -h|--help) usage 0 ;;
         -v|--version) echo "gh-sync ${VERSION}"; exit 0 ;;
         *)
@@ -704,6 +707,95 @@ count_files() {
         return
     fi
     find "$dir" -type f | wc -l | tr -d '[:space:]'
+}
+
+# =============================================================================
+# CONFIG — Show effective config or generate a project config template
+# =============================================================================
+do_config() {
+    local project_root="$1"
+    local subcommand="${2:-}"
+
+    if [[ "$subcommand" == "init" ]]; then
+        # Generate a .gh-sync.json template in the project root
+        local config_file="${project_root}/.gh-sync.json"
+        if [[ -f "$config_file" ]]; then
+            write_warn ".gh-sync.json already exists at: ${config_file}"
+            printf '  Overwrite? [y/N] '
+            read -r ans
+            case "$ans" in y|Y|yes|Yes) ;; *) write_warn "Aborted."; return 0 ;; esac
+        fi
+        cat > "$config_file" <<'TEMPLATE'
+{
+  "exclude": [],
+  "only": [],
+  "golden_source": ""
+}
+TEMPLATE
+        write_ok "Created: ${config_file}"
+        write_info "Edit the file to set defaults for this project."
+        write_info "  exclude     - patterns to skip (e.g. [\"*.log\", \"temp/*\"])"
+        write_info "  only        - folders to sync (e.g. [\".github\", \".agents\"])"
+        write_info "  golden_source - override golden source path for this project"
+        return 0
+    fi
+
+    # Default: show effective config
+    write_header "CONFIG: Effective Settings"
+
+    # Golden source resolution
+    local gs_source gs_value
+    if [[ -n "${GH_SYNC_SOURCE:-}" ]]; then
+        gs_source="GH_SYNC_SOURCE env var"
+        gs_value="$GH_SYNC_SOURCE"
+    elif [[ -n "${PROJECT_GOLDEN_SOURCE:-}" ]]; then
+        gs_source=".gh-sync.json (golden_source)"
+        gs_value="$PROJECT_GOLDEN_SOURCE"
+    else
+        local cfg_path
+        cfg_path="$(head -1 "$CONFIG_FILE" 2>/dev/null | tr -d '[:space:]')" || true
+        if [[ -n "$cfg_path" ]]; then
+            gs_source="${CONFIG_FILE}"
+            gs_value="$cfg_path"
+        else
+            gs_source="(not configured)"
+            gs_value="—"
+        fi
+    fi
+
+    printf '\n'
+    write_colored "$_color_white"   "Golden source"
+    write_info "  Value:  ${gs_value}"
+    write_info "  Source: ${gs_source}"
+
+    printf '\n'
+    write_colored "$_color_white"   "Sync folders"
+    write_info "  ${SYNC_FOLDERS[*]}"
+
+    printf '\n'
+    write_colored "$_color_white"   "Active filters"
+    if [[ ${#ONLY_FOLDERS[@]} -gt 0 ]]; then
+        write_info "  --only:    ${ONLY_FOLDERS[*]}"
+    else
+        write_info "  --only:    (all folders)"
+    fi
+    if [[ ${#EXCLUDE_PATTERNS[@]} -gt 0 ]]; then
+        write_info "  --exclude: ${EXCLUDE_PATTERNS[*]}"
+    else
+        write_info "  --exclude: (none)"
+    fi
+
+    printf '\n'
+    write_colored "$_color_white"   "Project config file"
+    local pconf="${project_root}/.gh-sync.json"
+    if [[ -f "$pconf" ]]; then
+        write_info "  ${pconf} (loaded)"
+    else
+        write_info "  ${pconf} (not found)"
+    fi
+
+    printf '\n'
+    write_info "Run 'gh-sync config init' to generate a .gh-sync.json template."
 }
 
 # =============================================================================
@@ -1337,6 +1429,24 @@ main() {
         exit 0
     fi
 
+    # Handle config (works without golden source; shows current settings)
+    if [[ "$ACTION" == "config" ]]; then
+        # Resolve project path for config display
+        local cfg_project_root="${PROJECT_PATH:-$(pwd)}"
+        cfg_project_root="$(normalize_path "$cfg_project_root")"
+        [[ -d "$cfg_project_root" ]] && cfg_project_root="$(cd "$cfg_project_root" && pwd -P)"
+        load_project_config "$cfg_project_root"
+        # Subcommand may be the first positional after 'config'
+        local config_sub=""
+        # Check if the next positional (stored in PROJECT_PATH after parsing) looks like a subcommand
+        if [[ "${PROJECT_PATH:-}" == "init" ]]; then
+            config_sub="init"
+            cfg_project_root="$(pwd)"
+        fi
+        do_config "$cfg_project_root" "$config_sub"
+        exit 0
+    fi
+
     # Handle clean separately (doesn't require project path or golden source)
     if [[ "$ACTION" == "clean" ]]; then
         do_clean
@@ -1406,6 +1516,7 @@ main() {
         pull)   do_pull   "$golden_source" "$project_root" ;;
         diff)   do_diff   "$golden_source" "$project_root" ;;
         status) do_status "$golden_source" "$project_root" ;;
+        config) do_config "$project_root"  ;;
     esac
 }
 

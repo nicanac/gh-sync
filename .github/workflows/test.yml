@@ -1,0 +1,102 @@
+name: Test Suite
+
+on:
+  push:
+    branches: ["main", "claude/**", "feature/**", "ai/**"]
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Bash tests — run on Ubuntu and macOS
+  # ---------------------------------------------------------------------------
+  bash-tests:
+    name: Bash (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install BATS (Ubuntu)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y bats
+
+      - name: Install BATS (macOS)
+        if: runner.os == 'macOS'
+        run: brew install bats-core
+
+      - name: Verify bash version (macOS needs bash 4+)
+        if: runner.os == 'macOS'
+        run: |
+          brew install bash
+          # Prepend GNU bash to PATH so BATS uses it
+          echo "/usr/local/bin" >> "$GITHUB_PATH" || echo "/opt/homebrew/bin" >> "$GITHUB_PATH"
+
+      - name: Make scripts executable
+        run: chmod +x gh-sync.sh run-tests.sh tests/*.bats
+
+      - name: Run test suite
+        run: ./run-tests.sh --tap
+        env:
+          TMPDIR: ${{ runner.temp }}
+
+  # ---------------------------------------------------------------------------
+  # PowerShell tests — run on Windows with Pester
+  # ---------------------------------------------------------------------------
+  powershell-tests:
+    name: PowerShell (windows-latest)
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Pester
+        shell: pwsh
+        run: |
+          Install-Module -Name Pester -Force -SkipPublisherCheck -MinimumVersion 5.0.0
+          Import-Module Pester
+
+      - name: Run PowerShell tests
+        shell: pwsh
+        run: |
+          $config = New-PesterConfiguration
+          $config.Run.Path = 'tests'
+          $config.Run.PassThru = $true
+          $config.Output.Verbosity = 'Detailed'
+          $config.Filter.ExcludeTag = 'ManualOnly'
+          $result = Invoke-Pester -Configuration $config
+          if ($result.FailedCount -gt 0) { exit 1 }
+
+  # ---------------------------------------------------------------------------
+  # Shell linting — shellcheck on bash scripts
+  # ---------------------------------------------------------------------------
+  shellcheck:
+    name: ShellCheck
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install ShellCheck
+        run: sudo apt-get install -y shellcheck
+
+      - name: Lint gh-sync.sh
+        run: shellcheck --severity=warning gh-sync.sh
+
+      - name: Lint install.sh
+        run: shellcheck --severity=warning install.sh
+
+      - name: Lint run-tests.sh
+        run: shellcheck --severity=warning run-tests.sh
+
+      - name: Lint test helper
+        run: shellcheck --severity=warning tests/test_helper.bash || true
