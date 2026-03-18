@@ -570,17 +570,20 @@ compare_folders() {
 
     local results=""
 
-    # Files only in source (one comm call, no loop)
+    # Files only in source — write comm output to temp file (avoid process substitution,
+    # which requires /dev/fd and breaks in some container/sandbox environments)
+    comm -23 "$tmp_dir/sk.txt" "$tmp_dir/tk.txt" > "$tmp_dir/only_source.txt"
     while IFS= read -r key; do
         [[ -n "$key" ]] || continue
         results+="ONLY_IN_SOURCE\t${key}\tOnly in ${source_label}\n"
-    done < <(comm -23 "$tmp_dir/sk.txt" "$tmp_dir/tk.txt")
+    done < "$tmp_dir/only_source.txt"
 
     # Files only in target
+    comm -13 "$tmp_dir/sk.txt" "$tmp_dir/tk.txt" > "$tmp_dir/only_target.txt"
     while IFS= read -r key; do
         [[ -n "$key" ]] || continue
         results+="ONLY_IN_TARGET\t${key}\tOnly in ${target_label}\n"
-    done < <(comm -13 "$tmp_dir/sk.txt" "$tmp_dir/tk.txt")
+    done < "$tmp_dir/only_target.txt"
 
     # Files in both — build keyed hash+mtime lookup tables, then join
     # Source: key<TAB>hash<TAB>mtime
